@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#6366f1">
+<title>Zeebas CashBook</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f; --bg2: #0d0d1a; --bg3: #111128;
+  --glass: rgba(255,255,255,0.06); --glass-border: rgba(255,255,255,0.12);
+  --glass-hover: rgba(255,255,255,0.1);
+  --primary: #6366f1; --primary2: #8b5cf6;
+  --grad: linear-gradient(135deg,#6366f1,#8b5cf6);
+  --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #06b6d4;
+  --text: #ffffff; --text2: rgba(255,255,255,0.65); --text3: rgba(255,255,255,0.35);
+  --radius: 20px; --radius-sm: 12px; --radius-xs: 8px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+  --shadow-sm: 0 4px 16px rgba(0,0,0,0.3);
+  --blur: blur(20px) saturate(180%);
+  --nav-h: 70px;
+}
+.light {
+  --bg: #f0f4ff; --bg2: #e8edf8; --bg3: #dde5f5;
+  --glass: rgba(255,255,255,0.65); --glass-border: rgba(255,255,255,0.9);
+  --glass-hover: rgba(255,255,255,0.8);
+  --text: #0a0a0f; --text2: rgba(10,10,15,0.65); --text3: rgba(10,10,15,0.35);
+  --shadow: 0 8px 32px rgba(99,102,241,0.15), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background 0.3s;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+/* GLASS CARD */
+.glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.glass-sm{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);}
+/* BUTTON */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border:none;border-radius:50px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;outline:none;}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 4px 20px rgba(99,102,241,0.4);}
+.btn-primary:active{transform:scale(0.97);}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 4px 20px rgba(16,185,129,0.4);}
+.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 20px rgba(239,68,68,0.4);}
+.btn-ghost{background:var(--glass);border:1px solid var(--glass-border);color:var(--text);}
+.btn-sm{padding:8px 16px;font-size:13px;}
+.btn-full{width:100%;justify-content:center;}
+/* INPUT */
+.input-group{margin-bottom:16px;}
+.input-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500;}
+.input-field{width:100%;padding:14px 16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;outline:none;transition:all 0.2s;}
+.input-field:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,0.2);}
+.input-field::placeholder{color:var(--text3);}
+select.input-field option{background:#1a1a2e;color:#fff;}
+/* TOP BAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-border);position:sticky;top:0;z-index:100;}
+.topbar-title{font-size:18px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-icon{width:38px;height:38px;border-radius:50%;background:var(--glass);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);position:relative;}
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--glass-border);padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:200;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px;transition:all 0.2s;}
+.nav-item i{font-size:20px;color:var(--text3);transition:all 0.2s;}
+.nav-item span{font-size:10px;color:var(--text3);font-weight:500;}
+.nav-item.active i{color:var(--primary);}
+.nav-item.active span{color:var(--primary);}
+/* CONTENT AREA */
+.content{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(var(--nav-h) + 16px);}
+/* CARDS */
+.stat-card{padding:18px;border-radius:var(--radius);}
+.stat-cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.stat-label{font-size:12px;color:var(--text2);margin-bottom:4px;}
+.stat-value{font-size:22px;font-weight:700;}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+/* TRANSACTION ITEM */
+.txn-item{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:8px;cursor:pointer;transition:all 0.2s;}
+.txn-item:active{transform:scale(0.99);}
+.txn-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.txn-info{flex:1;min-width:0;}
+.txn-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.txn-detail{font-size:12px;color:var(--text2);margin-top:2px;}
+.txn-amount{font-size:16px;font-weight:700;flex-shrink:0;}
+.txn-amount.in{color:var(--success);}
+.txn-amount.out{color:var(--danger);}
+/* DATE GROUP */
+.date-group{font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:12px 0 6px;}
+/* BOOK CARD */
+.book-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--radius);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:12px;cursor:pointer;transition:all 0.2s;}
+.book-card:active{transform:scale(0.99);}
+.book-icon{width:48px;height:48px;border-radius:14px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;}
+.book-info{flex:1;}
+.book-name{font-size:15px;font-weight:700;}
+.book-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.book-balance{font-size:18px;font-weight:700;}
+.book-actions{display:flex;gap:6px;}
+.book-action-btn{width:30px;height:30px;border-radius:8px;background:var(--glass);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2);cursor:pointer;}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);z-index:1000;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--glass-border);border-radius:24px 24px 0 0;width:100%;max-height:92vh;overflow-y:auto;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+.modal-handle{width:40px;height:4px;background:var(--text3);border-radius:2px;margin:0 auto 20px;}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;}
+/* PILL TABS */
+.pill-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:20px;}
+.pill-tabs::-webkit-scrollbar{display:none;}
+.pill-tab{padding:8px 18px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;background:var(--glass);border:1px solid var(--glass-border);color:var(--text2);}
+.pill-tab.active{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(99,102,241,0.3);}
+/* AMOUNT INPUT */
+.amount-display{text-align:center;padding:24px;font-size:48px;font-weight:700;letter-spacing:-2px;}
+.amount-display .currency{font-size:24px;vertical-align:super;font-weight:500;color:var(--text2);}
+/* TOGGLE */
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-sm);}
+.toggle{width:48px;height:28px;background:var(--text3);border-radius:50px;position:relative;cursor:pointer;transition:all 0.3s;}
+.toggle.on{background:var(--primary);}
+.toggle::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:3px;left:3px;transition:all 0.3s;}
+.toggle.on::after{left:23px;}
+/* CATEGORY GRID */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.cat-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);cursor:pointer;transition:all 0.2s;}
+.cat-item.selected{border-color:var(--primary);background:rgba(99,102,241,0.15);}
+.cat-item i{font-size:20px;}
+.cat-item span{font-size:10px;color:var(--text2);text-align:center;}
+/* SEARCH */
+.search-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:50px;margin-bottom:16px;}
+.search-bar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;}
+.search-bar input::placeholder{color:var(--text3);}
+/* SECTION TITLE */
+.section-title{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+/* FAB */
+.fab{position:fixed;bottom:calc(var(--nav-h) + 16px);right:16px;width:58px;height:58px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 8px 24px rgba(99,102,241,0.5);cursor:pointer;z-index:150;border:none;transition:all 0.2s;}
+.fab:active{transform:scale(0.93);}
+/* PAYMENT PILLS */
+.pay-pills{display:flex;gap:8px;margin-bottom:16px;}
+.pay-pill{flex:1;padding:10px;border-radius:50px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--glass-border);background:var(--glass);color:var(--text2);transition:all 0.2s;}
+.pay-pill.selected{background:var(--grad);border-color:transparent;color:#fff;}
+/* KHATA CARD */
+.khata-card{padding:16px;border-radius:var(--radius);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:12px;}
+.khata-party{font-size:15px;font-weight:700;}
+.khata-amount{font-size:20px;font-weight:700;}
+/* BADGE */
+.badge{display:inline-block;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;}
+.badge-success{background:rgba(16,185,129,0.15);color:var(--success);}
+.badge-danger{background:rgba(239,68,68,0.15);color:var(--danger);}
+.badge-primary{background:rgba(99,102,241,0.15);color:var(--primary);}
+.badge-warning{background:rgba(245,158,11,0.15);color:var(--warning);}
+/* PIN SCREEN */
+.pin-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
+.pin-dots{display:flex;gap:16px;margin:32px 0;}
+.pin-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--glass-border);background:transparent;transition:all 0.2s;}
+.pin-dot.filled{background:var(--primary);border-color:var(--primary);}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px;}
+.pin-key{padding:20px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);font-size:22px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.15s;}
+.pin-key:active{transform:scale(0.93);background:var(--glass-hover);}
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
+.login-logo{width:80px;height:80px;border-radius:24px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;margin-bottom:24px;box-shadow:0 8px 32px rgba(99,102,241,0.4);}
+.login-card{width:100%;max-width:380px;}
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:48px 24px;color:var(--text2);}
+.empty-state i{font-size:48px;margin-bottom:16px;opacity:0.3;}
+.empty-state h3{font-size:18px;font-weight:600;margin-bottom:8px;}
+.empty-state p{font-size:14px;color:var(--text3);}
+/* NOTIFICATION BADGE */
+.notif-badge{position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+/* PROGRESS BAR */
+.progress-bar{height:6px;background:var(--glass);border-radius:3px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;border-radius:3px;background:var(--grad);}
+/* CHART CONTAINER */
+.chart-wrap{position:relative;height:200px;margin-bottom:20px;}
+/* SWIPE ACTION */
+.swipe-container{position:relative;overflow:hidden;}
+/* PASSBOOK */
+.passbook-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--glass-border);}
+.passbook-row:last-child{border-bottom:none;}
+/* REPORT TABLE */
+.report-table{width:100%;border-collapse:collapse;}
+.report-table th{font-size:12px;color:var(--text2);text-align:left;padding:8px;border-bottom:1px solid var(--glass-border);}
+.report-table td{font-size:13px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.04);}
+/* PILL TYPE TOGGLE */
+.type-toggle{display:flex;background:var(--glass);border:1px solid var(--glass-border);border-radius:50px;padding:4px;margin-bottom:20px;}
+.type-btn{flex:1;padding:10px;border-radius:50px;text-align:center;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--text2);}
+.type-btn.in.active{background:linear-gradient(135deg,#10b981,#059669);color:#fff;}
+.type-btn.out.active{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
+/* TEMPLATE CHIPS */
+.template-chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;}
+.template-chips::-webkit-scrollbar{display:none;}
+.chip{padding:8px 16px;border-radius:50px;font-size:13px;font-weight:500;background:var(--glass);border:1px solid var(--glass-border);color:var(--text2);cursor:pointer;white-space:nowrap;transition:all 0.2s;}
+.chip:active{background:var(--glass-hover);}
+/* SORT DROPDOWN */
+.sort-wrap{display:flex;gap:8px;margin-bottom:16px;}
+/* RECURRING */
+.recurring-card{padding:14px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+/* SETTING ROW */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:16px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:8px;cursor:pointer;}
+.setting-row-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:12px;}
+/* ANIMATIONS */
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.slide-up{animation:slideUp 0.3s ease;}
+.fade-in{animation:fadeIn 0.3s ease;}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:0;}
+/* GLOW */
+.glow-primary{box-shadow:0 0 20px rgba(99,102,241,0.3);}
+.glow-success{box-shadow:0 0 20px rgba(16,185,129,0.3);}
+.glow-danger{box-shadow:0 0 20px rgba(239,68,68,0.3);}
+</style>
+</head>
+<body>
+
+<!-- PIN LOCK SCREEN -->
+<div id="pinScreen" class="pin-screen" style="display:none;">
+  <div style="text-align:center;">
+    <div class="login-logo" style="margin:0 auto 16px;"><i class="fas fa-book-open"></i></div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:4px;">Zeebas CashBook</h2>
+    <p style="color:var(--text2);font-size:14px;">Enter your PIN to continue</p>
+  </div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-keypad">
+    <div class="pin-key" onclick="pinKey('1')">1</div>
+    <div class="pin-key" onclick="pinKey('2')">2 <span style="font-size:9px;color:var(--text3);display:block;">ABC</span></div>
+    <div class="pin-key" onclick="pinKey('3')">3 <span style="font-size:9px;color:var(--text3);display:block;">DEF</span></div>
+    <div class="pin-key" onclick="pinKey('4')">4 <span style="font-size:9px;color:var(--text3);display:block;">GHI</span></div>
+    <div class="pin-key" onclick="pinKey('5')">5 <span style="font-size:9px;color:var(--text3);display:block;">JKL</span></div>
+    <div class="pin-key" onclick="pinKey('6')">6 <span style="font-size:9px;color:var(--text3);display:block;">MNO</span></div>
+    <div class="pin-key" onclick="pinKey('7')">7 <span style="font-size:9px;color:var(--text3);display:block;">PQRS</span></div>
+    <div class="pin-key" onclick="pinKey('8')">8 <span style="font-size:9px;color:var(--text3);display:block;">TUV</span></div>
+    <div class="pin-key" onclick="pinKey('9')">9 <span style="font-size:9px;color:var(--text3);display:block;">WXYZ</span></div>
+    <div class="pin-key" style="background:none;border:none;"></div>
+    <div class="pin-key" onclick="pinKey('0')">0</div>
+    <div class="pin-key" onclick="pinDelete()"><i class="fas fa-delete-left"></i></div>
+  </div>
+  <button class="btn btn-ghost btn-sm" style="margin-top:24px;" onclick="showScreen('loginScreen')">Use Password Instead</button>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-logo"><i class="fas fa-book-open"></i></div>
+  <h2 style="font-size:26px;font-weight:800;margin-bottom:4px;">Zeebas CashBook</h2>
+  <p style="color:var(--text2);font-size:14px;margin-bottom:32px;">DOT Advertising — Accounting App</p>
+  <div class="glass login-card" style="padding:24px;">
+    <div class="input-group">
+      <label>Mobile Number</label>
+      <input class="input-field" id="loginMobile" type="tel" placeholder="Enter mobile number" value="9688187700">
+    </div>
+    <div class="input-group" style="position:relative;">
+      <label>Password</label>
+      <input class="input-field" id="loginPwd" type="password" placeholder="Enter password" value="zeebas123" style="padding-right:48px;">
+      <span onclick="togglePwd()" style="position:absolute;right:14px;top:38px;cursor:pointer;color:var(--text2);"><i class="fas fa-eye"></i></span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="rememberMe" checked style="accent-color:var(--primary);"> Remember me
+      </label>
+      <span style="font-size:13px;color:var(--primary);cursor:pointer;">Forgot PIN?</span>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:16px;">Demo: 9688187700 / zeebas123</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;margin-top:32px;">
+    <button class="btn btn-ghost btn-sm" onclick="toggleTheme()"><i class="fas fa-moon"></i> Dark / Light</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appScreen" class="screen" style="display:none;flex-direction:column;">
+
+  <!-- DASHBOARD -->
+  <div id="dashPage" class="screen active">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">DOT Advertising</div>
+        <div style="font-size:11px;color:var(--text3);">Good morning, Sabeez 👋</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="topbar-icon" onclick="toggleTheme()"><i class="fas fa-circle-half-stroke"></i></div>
+        <div class="topbar-icon" onclick="showNotifications()">
+          <i class="fas fa-bell"></i>
+          <div class="notif-badge" id="notifBadge">2</div>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      <!-- BALANCE CARD -->
+      <div class="glass" style="padding:24px;margin-bottom:20px;background:var(--grad);border:none;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
+        <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
+        <div style="font-size:13px;opacity:0.8;margin-bottom:4px;">Net Balance</div>
+        <div style="font-size:38px;font-weight:800;letter-spacing:-1px;" id="dashBalance">₹0</div>
+        <div style="font-size:12px;opacity:0.7;margin-top:4px;" id="dashMonth">June 2025</div>
+      </div>
+      <!-- STAT CARDS -->
+      <div class="stat-cards-grid">
+        <div class="glass stat-card glow-success">
+          <div style="color:var(--success);font-size:20px;margin-bottom:8px;"><i class="fas fa-arrow-down-left"></i></div>
+          <div class="stat-label">Cash In</div>
+          <div class="stat-value" id="dashIn" style="color:var(--success);">₹0</div>
+          <div class="stat-sub" id="dashInCount">0 transactions</div>
+        </div>
+        <div class="glass stat-card glow-danger">
+          <div style="color:var(--danger);font-size:20px;margin-bottom:8px;"><i class="fas fa-arrow-up-right"></i></div>
+          <div class="stat-label">Cash Out</div>
+          <div class="stat-value" id="dashOut" style="color:var(--danger);">₹0</div>
+          <div class="stat-sub" id="dashOutCount">0 transactions</div>
+        </div>
+        <div class="glass stat-card">
+          <div style="color:var(--warning);font-size:20px;margin-bottom:8px;"><i class="fas fa-clock"></i></div>
+          <div class="stat-label">Receivable</div>
+          <div class="stat-value" id="dashReceivable" style="color:var(--warning);">₹0</div>
+          <div class="stat-sub">Pending dues</div>
+        </div>
+        <div class="glass stat-card">
+          <div style="color:var(--info);font-size:20px;margin-bottom:8px;"><i class="fas fa-wallet"></i></div>
+          <div class="stat-label">Payable</div>
+          <div class="stat-value" id="dashPayable" style="color:var(--info);">₹0</div>
+          <div class="stat-sub">To be paid</div>
+        </div>
+      </div>
+      <!-- CHART -->
+      <div class="glass" style="padding:16px;margin-bottom:20px;">
+        <div class="section-title" style="margin-bottom:12px;">
+          <span>This Month</span>
+          <span style="font-size:12px;color:var(--text2);">Weekly Overview</span>
+        </div>
+        <div class="chart-wrap"><canvas id="dashChart"></canvas></div>
+        <div style="display:flex;gap:16px;justify-content:center;font-size:12px;color:var(--text2);">
+          <span><span style="color:var(--success);">●</span> Cash In</span>
+          <span><span style="color:var(--danger);">●</span> Cash Out</span>
+        </div>
+      </div>
+      <!-- RECENT TRANSACTIONS -->
+      <div class="section-title">
+        <span>Recent Transactions</span>
+        <span style="font-size:13px;color:var(--primary);cursor:pointer;" onclick="goToBooks()">See All</span>
+      </div>
+      <div id="recentTxns"></div>
+    </div>
+  </div>
+
+  <!-- BOOKS LIST -->
+  <div id="booksPage" class="screen">
+    <div class="topbar">
+      <div class="topbar-title">Cashbooks</div>
+      <div class="topbar-icon" onclick="showAddBookModal()"><i class="fas fa-plus"></i></div>
+    </div>
+    <div class="content">
+      <div class="search-bar">
+        <i class="fas fa-search" style="color:var(--text3);"></i>
+        <input type="text" placeholder="Search by book name..." id="bookSearch" oninput="filterBooks()">
+        <span style="font-size:11px;color:var(--text3);">/</span>
+      </div>
+      <div class="sort-wrap">
+        <select class="input-field" id="bookSort" onchange="renderBooks()" style="flex:1;border-radius:50px;padding:10px 16px;">
+          <option value="updated">Sort: Last Updated</option>
+          <option value="name">Sort: Name</option>
+        </select>
+      </div>
+      <div id="booksList"></div>
+      <!-- TEMPLATES -->
+      <div style="margin-top:8px;">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px;"><i class="fas fa-plus-circle" style="color:var(--primary);margin-right:6px;"></i>Add New Book</div>
+        <div class="template-chips">
+          <div class="chip" onclick="quickAddBook('June Expenses')">June Expenses</div>
+          <div class="chip" onclick="quickAddBook('Home Expense')">Home Expense</div>
+          <div class="chip" onclick="quickAddBook('Receivable Book')">Receivable Book</div>
+          <div class="chip" onclick="quickAddBook('Account Book')">Account Book</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIDE BOOK (TRANSACTIONS) -->
+  <div id="bookDetailPage" class="screen">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="topbar-icon" onclick="navTo('booksPage')"><i class="fas fa-chevron-left"></i></div>
+        <div>
+          <div class="topbar-title" id="bookDetailName">Book Name</div>
+          <div style="font-size:11px;color:var(--text3);" id="bookDetailBalance">Balance: ₹0</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div class="topbar-icon" onclick="showSearchModal()"><i class="fas fa-search"></i></div>
+        <div class="topbar-icon" onclick="showFilterModal()"><i class="fas fa-filter"></i></div>
+      </div>
+    </div>
+    <div class="content" id="txnListContent">
+      <!-- Cash In / Cash Out buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <button class="btn btn-success btn-full" onclick="openAddTxn('in')"><i class="fas fa-plus"></i> Cash In</button>
+        <button class="btn btn-danger btn-full" onclick="openAddTxn('out')"><i class="fas fa-minus"></i> Cash Out</button>
+      </div>
+      <div id="txnList"></div>
+    </div>
+  </div>
+
+  <!-- KHATA PAGE -->
+  <div id="khataPage" class="screen">
+    <div class="topbar">
+      <div class="topbar-title">Khata</div>
+      <div class="topbar-icon" onclick="showAddKhataModal()"><i class="fas fa-plus"></i></div>
+    </div>
+    <div class="content">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="khataTab1" onclick="switchKhataTab('receivable')">💚 You Will Receive</div>
+        <div class="pill-tab" id="khataTab2" onclick="switchKhataTab('payable')">❤️ You Will Pay</div>
+      </div>
+      <div id="khataList"></div>
+    </div>
+  </div>
+
+  <!-- REPORTS PAGE -->
+  <div id="reportsPage" class="screen">
+    <div class="topbar">
+      <div class="topbar-title">Reports</div>
+    </div>
+    <div class="content">
+      <!-- Date Filter -->
+      <div class="pill-tabs">
+        <div class="pill-tab active" onclick="setReportPeriod('today',this)">Today</div>
+        <div class="pill-tab" onclick="setReportPeriod('week',this)">This Week</div>
+        <div class="pill-tab" onclick="setReportPeriod('month',this)">This Month</div>
+        <div class="pill-tab" onclick="setReportPeriod('custom',this)">Custom</div>
+      </div>
+      <div id="customDateRange" style="display:none;display:none;gap:8px;margin-bottom:16px;">
+        <input class="input-field" type="date" id="reportStart" style="flex:1;">
+        <input class="input-field" type="date" id="reportEnd" style="flex:1;">
+        <button class="btn btn-primary btn-sm" onclick="generateReport()">Go</button>
+      </div>
+      <!-- Summary -->
+      <div class="stat-cards-grid" style="margin-bottom:20px;">
+        <div class="glass stat-card"><div class="stat-label">Total In</div><div class="stat-value" id="rptIn" style="color:var(--success);">₹0</div></div>
+        <div class="glass stat-card"><div class="stat-label">Total Out</div><div class="stat-value" id="rptOut" style="color:var(--danger);">₹0</div></div>
+      </div>
+      <!-- PIE CHART -->
+      <div class="glass" style="padding:16px;margin-bottom:20px;">
+        <div class="section-title">Category Breakdown</div>
+        <div style="position:relative;height:220px;"><canvas id="pieChart"></canvas></div>
+      </div>
+      <!-- TABLE -->
+      <div class="glass" style="padding:16px;margin-bottom:20px;">
+        <div class="section-title">
+          <span>By Category</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+          </div>
+        </div>
+        <table class="report-table" id="reportTable">
+          <thead><tr><th>Category</th><th>Amount</th><th>%</th></tr></thead>
+          <tbody id="reportTableBody"></tbody>
+        </table>
+      </div>
+      <!-- SHARE -->
+      <button class="btn btn-success btn-full" onclick="shareWhatsApp()"><i class="fab fa-whatsapp"></i> Share on WhatsApp</button>
+    </div>
+  </div>
+
+  <!-- PROFILE PAGE -->
+  <div id="profilePage" class="screen">
+    <div class="topbar">
+      <div class="topbar-title">Profile & Settings</div>
+    </div>
+    <div class="content">
+      <!-- User Card -->
+      <div class="glass" style="padding:20px;margin-bottom:20px;text-align:center;">
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin:0 auto 12px;">S</div>
+        <div style="font-size:18px;font-weight:700;" id="profileName">Sabeez</div>
+        <div style="font-size:13px;color:var(--text2);" id="profileMobile">+91 96881 87700</div>
+        <div class="badge badge-primary" style="margin-top:8px;">Primary Admin</div>
+      </div>
+      <!-- Settings -->
+      <div class="section-title">Preferences</div>
+      <div class="setting-row" onclick="toggleTheme()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(99,102,241,0.15);color:var(--primary);"><i class="fas fa-moon"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">Dark / Light Mode</div><div style="font-size:12px;color:var(--text2);">Toggle app theme</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <div class="setting-row" onclick="showPinSetup()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(16,185,129,0.15);color:var(--success);"><i class="fas fa-lock"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">PIN Lock</div><div style="font-size:12px;color:var(--text2);" id="pinStatus">Not set</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <div class="setting-row" onclick="showRecurring()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(245,158,11,0.15);color:var(--warning);"><i class="fas fa-rotate"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">Recurring Transactions</div><div style="font-size:12px;color:var(--text2);">Auto salary, rent etc.</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <div class="section-title" style="margin-top:20px;">Data</div>
+      <div class="setting-row" onclick="backupData()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(6,182,212,0.15);color:var(--info);"><i class="fas fa-cloud-arrow-down"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">Backup Data</div><div style="font-size:12px;color:var(--text2);">Download JSON backup</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <div class="setting-row" onclick="document.getElementById('restoreFile').click()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(139,92,246,0.15);color:var(--primary2);"><i class="fas fa-cloud-arrow-up"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">Restore Backup</div><div style="font-size:12px;color:var(--text2);">Upload JSON to restore</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreData(this)">
+      <div class="section-title" style="margin-top:20px;">Support</div>
+      <div class="setting-row" onclick="window.open('mailto:mail@dotad.agency')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(99,102,241,0.15);color:var(--primary);"><i class="fas fa-envelope"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">Email Support</div><div style="font-size:12px;color:var(--text2);">mail@dotad.agency</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <div class="setting-row" onclick="window.open('https://wa.me/919688187700')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="setting-row-icon" style="background:rgba(16,185,129,0.15);color:var(--success);"><i class="fab fa-whatsapp"></i></div>
+          <div><div style="font-size:14px;font-weight:600;">WhatsApp Support</div><div style="font-size:12px;color:var(--text2);">+91 96881 87700</div></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text3);"></i>
+      </div>
+      <div style="margin-top:24px;">
+        <button class="btn btn-danger btn-full" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+      <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--text3);">Zeebas CashBook v1.0.0 · DOT Advertising</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" id="nav-dash" onclick="navTo('dashPage','nav-dash')">
+      <i class="fas fa-chart-pie"></i><span>Dashboard</span>
+    </div>
+    <div class="nav-item" id="nav-books" onclick="navTo('booksPage','nav-books')">
+      <i class="fas fa-book-open"></i><span>Books</span>
+    </div>
+    <div class="nav-item" id="nav-khata" onclick="navTo('khataPage','nav-khata')">
+      <i class="fas fa-handshake"></i><span>Khata</span>
+    </div>
+    <div class="nav-item" id="nav-reports" onclick="navTo('reportsPage','nav-reports')">
+      <i class="fas fa-chart-bar"></i><span>Reports</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="navTo('profilePage','nav-profile')">
+      <i class="fas fa-user-circle"></i><span>Profile</span>
+    </div>
+  </nav>
+</div>
+
+<!-- MODALS -->
+<!-- ADD TRANSACTION MODAL -->
+<div class="modal-overlay" id="addTxnModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="type-toggle">
+      <div class="type-btn in active" id="txnTypeIn" onclick="setTxnType('in')">+ Cash In</div>
+      <div class="type-btn out" id="txnTypeOut" onclick="setTxnType('out')">− Cash Out</div>
+    </div>
+    <div class="amount-display"><span class="currency">₹</span><span id="txnAmountDisplay">0</span></div>
+    <div class="input-group">
+      <label>Amount (₹)</label>
+      <input class="input-field" id="txnAmount" type="number" placeholder="0.00" oninput="document.getElementById('txnAmountDisplay').textContent=this.value||'0'">
+    </div>
+    <div class="input-group">
+      <label>Category</label>
+      <div class="cat-grid" id="categoryGrid"></div>
+    </div>
+    <div class="input-group">
+      <label>Payment Mode</label>
+      <div class="pay-pills">
+        <div class="pay-pill selected" id="mode-cash" onclick="selectMode('cash')"><i class="fas fa-money-bill"></i> Cash</div>
+        <div class="pay-pill" id="mode-bank" onclick="selectMode('bank')"><i class="fas fa-university"></i> Bank</div>
+        <div class="pay-pill" id="mode-upi" onclick="selectMode('upi')"><i class="fas fa-mobile-screen"></i> UPI</div>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Party Name (Payer / Payee)</label>
+      <input class="input-field" id="txnParty" type="text" placeholder="Name of person / company">
+    </div>
+    <div class="input-group">
+      <label>Date & Time</label>
+      <input class="input-field" id="txnDate" type="datetime-local">
+    </div>
+    <div class="input-group">
+      <label>Note / Description</label>
+      <textarea class="input-field" id="txnNote" rows="2" placeholder="Add a note..."></textarea>
+    </div>
+    <div class="input-group">
+      <label>Receipt Image</label>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('receiptInput').click()"><i class="fas fa-camera"></i> Attach</button>
+        <input type="file" id="receiptInput" accept="image/*" style="display:none;" onchange="handleReceipt(this)">
+        <span id="receiptName" style="font-size:12px;color:var(--text2);"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeModal('addTxnModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="saveTxn()"><i class="fas fa-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BOOK MODAL -->
+<div class="modal-overlay" id="addBookModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add New Book</div>
+    <div class="input-group">
+      <label>Book Name</label>
+      <input class="input-field" id="newBookName" type="text" placeholder="e.g. DOT Advertising 2025">
+    </div>
+    <div class="input-group">
+      <label>Opening Balance (₹)</label>
+      <input class="input-field" id="newBookBalance" type="number" placeholder="0">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeModal('addBookModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="saveBook()"><i class="fas fa-plus"></i> Add Book</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD KHATA MODAL -->
+<div class="modal-overlay" id="addKhataModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Khata Entry</div>
+    <div class="type-toggle">
+      <div class="type-btn in active" id="khataTypeIn" onclick="setKhataType('receivable')">💚 Will Receive</div>
+      <div class="type-btn out" id="khataTypeOut" onclick="setKhataType('payable')">❤️ Will Pay</div>
+    </div>
+    <div class="input-group">
+      <label>Party Name</label>
+      <input class="input-field" id="khataParty" type="text" placeholder="Person / Company name">
+    </div>
+    <div class="input-group">
+      <label>Amount (₹)</label>
+      <input class="input-field" id="khataAmount" type="number" placeholder="0">
+    </div>
+    <div class="input-group">
+      <label>Due Date</label>
+      <input class="input-field" id="khataDueDate" type="date">
+    </div>
+    <div class="input-group">
+      <label>Note</label>
+      <input class="input-field" id="khataNote" type="text" placeholder="Reason / description">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeModal('addKhataModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="saveKhata()"><i class="fas fa-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN SETUP MODAL -->
+<div class="modal-overlay" id="pinSetupModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="pinSetupTitle">Set PIN Lock</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;">Enter a 4-digit PIN to secure your app</p>
+    <div class="input-group">
+      <label>New PIN</label>
+      <input class="input-field" id="newPin" type="number" maxlength="4" placeholder="4-digit PIN">
+    </div>
+    <div class="input-group">
+      <label>Confirm PIN</label>
+      <input class="input-field" id="confirmPin" type="number" maxlength="4" placeholder="Confirm PIN">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeModal('pinSetupModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="savePIN()"><i class="fas fa-lock"></i> Set PIN</button>
+    </div>
+    <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="removePIN()">Remove PIN Lock</button>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div class="modal-overlay" id="notifModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Notifications</div>
+    <div id="notifList"></div>
+  </div>
+</div>
+
+<!-- RECURRING MODAL -->
+<div class="modal-overlay" id="recurringModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Recurring Transactions</div>
+    <div id="recurringList" style="margin-bottom:20px;"></div>
+    <button class="btn btn-primary btn-full" onclick="showAddRecurring()"><i class="fas fa-plus"></i> Add Recurring</button>
+  </div>
+</div>
+
+<script>
+// ======== DATA STORE ========
+const DB = {
+  get(k,d){try{return JSON.parse(localStorage.getItem('zcb_'+k))||d;}catch{return d;}},
+  set(k,v){localStorage.setItem('zcb_'+k,JSON.stringify(v));},
+};
+
+// Default demo data
+function initData(){
+  if(DB.get('initialized',false)) return;
+  const now=new Date();
+  DB.set('user',{id:1,name:'Sabeez',mobile:'9688187700',email:'mail@dotad.agency',role:'primary_admin'});
+  DB.set('businesses',[{id:1,name:'DOT Advertising',address:'NO.159, MAHADHANA STREET, MAYILADUTHURAI',gstin:'33CTNPR8742L1ZV',email:'mail@dotad.agency',mobile:'9688187700'}]);
+  DB.set('currentBiz',1);
+  DB.set('books',[
+    {id:1,bizId:1,name:'DOT Advertising 2025',opening:50000,members:2,updatedAt:'2025-06-15T10:00:00'},
+    {id:2,bizId:1,name:'DOT Advertising 2024',opening:20000,members:2,updatedAt:'2025-06-14T09:00:00'}
+  ]);
+  const cats=[
+    {id:1,name:'Salary',icon:'fa-money-bill',color:'#10b981'},
+    {id:2,name:'Rent',icon:'fa-home',color:'#ef4444'},
+    {id:3,name:'Marketing',icon:'fa-bullhorn',color:'#6366f1'},
+    {id:4,name:'Travel',icon:'fa-car',color:'#f59e0b'},
+    {id:5,name:'Food',icon:'fa-utensils',color:'#f97316'},
+    {id:6,name:'Office',icon:'fa-box',color:'#8b5cf6'},
+    {id:7,name:'Utilities',icon:'fa-bolt',color:'#06b6d4'},
+    {id:8,name:'Fuel',icon:'fa-gas-pump',color:'#84cc16'},
+    {id:9,name:'Maint.',icon:'fa-tools',color:'#ec4899'},
+    {id:10,name:'Other',icon:'fa-ellipsis',color:'#94a3b8'}
+  ];
+  DB.set('categories',cats);
+  const txns=[
+    {id:1,bookId:1,type:'in',amount:45000,catId:1,mode:'bank',party:'DOT Advertising Client',note:'Monthly Salary - June 2025',date:'2025-06-01'},
+    {id:2,bookId:1,type:'in',amount:12000,catId:3,mode:'bank',party:'Meta Platforms',note:'Facebook Ads Revenue',date:'2025-06-05'},
+    {id:3,bookId:1,type:'out',amount:8000,catId:2,mode:'bank',party:'Building Owner',note:'Office Rent June',date:'2025-06-01'},
+    {id:4,bookId:1,type:'out',amount:3500,catId:3,mode:'upi',party:'Google LLC',note:'Google Ads Campaign',date:'2025-06-03'},
+    {id:5,bookId:1,type:'out',amount:1200,catId:5,mode:'cash',party:'Hotel Saravana Bhavan',note:'Team Lunch',date:'2025-06-07'},
+    {id:6,bookId:1,type:'in',amount:18000,catId:3,mode:'bank',party:'Retail Client',note:'Social Media Management Fee',date:'2025-06-10'},
+    {id:7,bookId:1,type:'out',amount:2500,catId:4,mode:'cash',party:'Uber',note:'Client Meeting Travel',date:'2025-06-10'},
+    {id:8,bookId:1,type:'out',amount:4500,catId:7,mode:'bank',party:'BSNL & TNEB',note:'Internet + Electricity',date:'2025-06-05'},
+    {id:9,bookId:1,type:'in',amount:9000,catId:3,mode:'upi',party:'Startup Client',note:'Logo Design Project',date:'2025-06-12'},
+    {id:10,bookId:1,type:'out',amount:1800,catId:6,mode:'cash',party:'Stationery Shop',note:'Printer Cartridge & Paper',date:'2025-06-08'},
+    {id:11,bookId:1,type:'out',amount:3000,catId:4,mode:'bank',party:'TNSTC Bus',note:'Chennai Trip',date:'2025-06-14'},
+    {id:12,bookId:1,type:'in',amount:25000,catId:3,mode:'bank',party:'Manufacturing Client',note:'Annual Contract Payment',date:'2025-06-15'},
+    {id:13,bookId:1,type:'out',amount:600,catId:8,mode:'cash',party:'HP Petrol Bunk',note:'Bike Fuel',date:'2025-06-09'},
+    {id:14,bookId:1,type:'out',amount:1500,catId:10,mode:'cash',party:'Various',note:'Miscellaneous',date:'2025-06-11'},
+    {id:15,bookId:1,type:'in',amount:6000,catId:3,mode:'upi',party:'Local Business',note:'Brochure Design',date:'2025-06-13'},
+  ];
+  DB.set('transactions',txns);
+  DB.set('khata',[
+    {id:1,bizId:1,type:'receivable',party:'Retail Client',amount:15000,remaining:15000,note:'Pending invoice payment',dueDate:'2025-06-30'},
+    {id:2,bizId:1,type:'payable',party:'Printing Vendor',amount:5000,remaining:5000,note:'Flex printing work',dueDate:'2025-06-20'}
+  ]);
+  DB.set('notifications',[
+    {id:1,title:'Welcome to Zeebas CashBook!',message:'Your account is ready. Start adding transactions.',type:'info',read:false,time:'2025-06-15T09:00:00'},
+    {id:2,title:'Payment Due Reminder',message:'Retail Client payment of ₹15,000 due on June 30',type:'warning',read:false,time:'2025-06-14T10:00:00'}
+  ]);
+  DB.set('recurring',[
+    {id:1,bookId:1,type:'out',amount:8000,catId:2,note:'Office Rent',party:'Building Owner',frequency:'monthly',nextDate:'2025-07-01'},
+    {id:2,bookId:1,type:'in',amount:45000,catId:1,note:'Monthly Salary',party:'DOT Advertising',frequency:'monthly',nextDate:'2025-07-01'}
+  ]);
+  DB.set('initialized',true);
+}
+
+// ======== STATE ========
+let state={
+  txnType:'in',khataType:'receivable',selectedCat:null,selectedMode:'cash',
+  currentBookId:null,reportPeriod:'month',editTxnId:null,
+  pinEntry:'',pinSetupStep:1
+};
+let dashChartInst=null,pieChartInst=null;
+
+// ======== INIT ========
+window.addEventListener('load',()=>{
+  initData();
+  applyTheme();
+  if(DB.get('pinEnabled',false)&&!DB.get('pinVerified',false)){
+    document.getElementById('pinScreen').style.display='flex';
+  } else if(DB.get('token',null)){
+    showApp();
+  } else {
+    document.getElementById('loginScreen').style.display='flex';
+  }
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
+});
+
+function applyTheme(){
+  document.body.className=DB.get('theme','dark')==='light'?'light':'';
+}
+function toggleTheme(){
+  const t=DB.get('theme','dark')==='light'?'dark':'light';
+  DB.set('theme',t);applyTheme();
+}
+
+// ======== AUTH ========
+async function doLogin(){
+  const m=document.getElementById('loginMobile').value;
+  const p=document.getElementById('loginPwd').value;
+  if(!m||!p){showToast('Enter mobile and password','danger');return;}
+  // Try API first
+  try{
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mobile:m,password:p})});
+    if(r.ok){const d=await r.json();DB.set('token',d.token);DB.set('user',d.user);}
+  }catch{}
+  // Local demo check
+  if(m==='9688187700'&&p==='zeebas123'){
+    DB.set('token','demo_token_'+Date.now());
+    showApp();
+  } else if(DB.get('token',null)){
+    showApp();
+  } else {
+    showToast('Invalid credentials','danger');
+  }
+}
+function doLogout(){
+  DB.set('token',null);DB.set('pinVerified',false);
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+function showApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('pinScreen').style.display='none';
+  document.getElementById('appScreen').style.display='flex';
+  document.getElementById('appScreen').className='screen active';
+  navTo('dashPage','nav-dash');
+  renderDashboard();
+}
+function togglePwd(){
+  const f=document.getElementById('loginPwd');
+  f.type=f.type==='password'?'text':'password';
+}
+
+// ======== PIN ========
+function pinKey(k){
+  if(state.pinEntry.length>=4) return;
+  state.pinEntry+=k;
+  updatePinDots();
+  if(state.pinEntry.length===4) setTimeout(verifyPin,100);
+}
+function pinDelete(){state.pinEntry=state.pinEntry.slice(0,-1);updatePinDots();}
+function updatePinDots(){
+  for(let i=0;i<4;i++) document.getElementById('d'+i).className='pin-dot'+(i<state.pinEntry.length?' filled':'');
+}
+function verifyPin(){
+  if(state.pinEntry===DB.get('pin','')){DB.set('pinVerified',true);showApp();}
+  else{showToast('Wrong PIN','danger');state.pinEntry='';updatePinDots();}
+}
+function showPinSetup(){openModal('pinSetupModal');}
+function savePIN(){
+  const n=document.getElementById('newPin').value;
+  const c=document.getElementById('confirmPin').value;
+  if(n.length!==4||!/^\d{4}$/.test(n)){showToast('Enter 4-digit PIN','danger');return;}
+  if(n!==c){showToast('PINs do not match','danger');return;}
+  DB.set('pin',n);DB.set('pinEnabled',true);
+  document.getElementById('pinStatus').textContent='Enabled';
+  closeModal('pinSetupModal');showToast('PIN Lock enabled','success');
+}
+function removePIN(){
+  DB.set('pin','');DB.set('pinEnabled',false);
+  document.getElementById('pinStatus').textContent='Not set';
+  closeModal('pinSetupModal');showToast('PIN Lock removed');
+}
+
+// ======== NAVIGATION ========
+function navTo(pageId,navId){
+  document.querySelectorAll('.screen').forEach(s=>{
+    if(s.id!=='appScreen') s.className='screen';
+  });
+  const pg=document.getElementById(pageId);
+  if(pg) pg.className='screen active slide-up';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(navId) document.getElementById(navId)?.classList.add('active');
+  if(pageId==='dashPage') renderDashboard();
+  if(pageId==='booksPage') renderBooks();
+  if(pageId==='khataPage') renderKhata();
+  if(pageId==='reportsPage') renderReports();
+}
+function showScreen(id){
+  ['loginScreen','pinScreen'].forEach(s=>document.getElementById(s).style.display='none');
+  document.getElementById(id).style.display='flex';
+}
+function goToBooks(){navTo('booksPage','nav-books');}
+
+// ======== FORMAT ========
+function fmt(n){return '₹'+Number(n).toLocaleString('en-IN');}
+function fmtDate(d){return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});}
+function groupLabel(d){
+  const dt=new Date(d),now=new Date();
+  const diff=Math.floor((now-dt)/(1000*86400));
+  if(diff===0) return 'Today';
+  if(diff===1) return 'Yesterday';
+  return dt.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+}
+
+// ======== DASHBOARD ========
+function renderDashboard(){
+  const txns=DB.get('transactions',[]);
+  const now=new Date();
+  const monthTxns=txns.filter(t=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const totalIn=monthTxns.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+  const totalOut=monthTxns.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('dashBalance').textContent=fmt(totalIn-totalOut);
+  document.getElementById('dashIn').textContent=fmt(totalIn);
+  document.getElementById('dashOut').textContent=fmt(totalOut);
+  document.getElementById('dashInCount').textContent=monthTxns.filter(t=>t.type==='in').length+' transactions';
+  document.getElementById('dashOutCount').textContent=monthTxns.filter(t=>t.type==='out').length+' transactions';
+  const khata=DB.get('khata',[]);
+  document.getElementById('dashReceivable').textContent=fmt(khata.filter(k=>k.type==='receivable').reduce((s,k)=>s+k.remaining,0));
+  document.getElementById('dashPayable').textContent=fmt(khata.filter(k=>k.type==='payable').reduce((s,k)=>s+k.remaining,0));
+  // Chart
+  const weeks=['W1','W2','W3','W4'];
+  const wIn=[0,0,0,0],wOut=[0,0,0,0];
+  monthTxns.forEach(t=>{const w=Math.floor((new Date(t.date).getDate()-1)/7);if(w<4){if(t.type==='in')wIn[w]+=t.amount;else wOut[w]+=t.amount;}});
+  if(dashChartInst) dashChartInst.destroy();
+  const ctx=document.getElementById('dashChart').getContext('2d');
+  dashChartInst=new Chart(ctx,{type:'bar',data:{labels:weeks,datasets:[{label:'Cash In',data:wIn,backgroundColor:'rgba(16,185,129,0.6)',borderRadius:8},{label:'Cash Out',data:wOut,backgroundColor:'rgba(239,68,68,0.6)',borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.5)',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.5)',font:{size:10},callback:v=>'₹'+v.toLocaleString('en-IN')}}}}});
+  // Recent txns
+  const cats=DB.get('categories',[]);
+  const recent=txns.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  const el=document.getElementById('recentTxns');
+  if(!recent.length){el.innerHTML='<div class="empty-state"><i class="fas fa-receipt"></i><h3>No Transactions</h3><p>Add your first transaction</p></div>';return;}
+  let groups={};
+  recent.forEach(t=>{const g=groupLabel(t.date);if(!groups[g])groups[g]=[];groups[g].push(t);});
+  el.innerHTML=Object.entries(groups).map(([g,ts])=>`
+    <div class="date-group">${g}</div>
+    ${ts.map(t=>{const c=cats.find(c=>c.id===t.catId)||{icon:'fa-circle',color:'#888',name:'Other'};return`
+    <div class="txn-item" onclick="openTxnDetail(${t.id})">
+      <div class="txn-icon" style="background:${c.color}22;color:${c.color};"><i class="fas ${c.icon}"></i></div>
+      <div class="txn-info">
+        <div class="txn-name">${t.note||c.name}</div>
+        <div class="txn-detail">${t.party||''} · ${t.mode}</div>
+      </div>
+      <div class="txn-amount ${t.type}">${t.type==='in'?'+':'-'}${fmt(t.amount)}</div>
+    </div>`}).join('')}`).join('');
+}
+
+// ======== BOOKS ========
+function renderBooks(){
+  const books=DB.get('books',[]).filter(b=>b.bizId===DB.get('currentBiz',1));
+  const txns=DB.get('transactions',[]);
+  const search=document.getElementById('bookSearch')?.value?.toLowerCase()||'';
+  const sort=document.getElementById('bookSort')?.value||'updated';
+  let filtered=books.filter(b=>b.name.toLowerCase().includes(search));
+  if(sort==='name') filtered.sort((a,b)=>a.name.localeCompare(b.name));
+  else filtered.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+  const el=document.getElementById('booksList');
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><i class="fas fa-book-open"></i><h3>No Books</h3><p>Add a new cashbook to get started</p></div>';return;}
+  el.innerHTML=filtered.map(b=>{
+    const bTxns=txns.filter(t=>t.bookId===b.id);
+    const bal=b.opening+(bTxns.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0))-(bTxns.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0));
+    const balColor=bal>=0?'var(--success)':'var(--danger)';
+    return`<div class="book-card" onclick="openBook(${b.id})">
+      <div class="book-icon"><i class="fas fa-book"></i></div>
+      <div class="book-info">
+        <div class="book-name">${b.name}</div>
+        <div class="book-meta">${b.members||1} members · Updated ${fmtDate(b.updatedAt)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="book-balance" style="color:${balColor};">${fmt(bal)}</div>
+        <div class="book-actions" style="margin-top:6px;" onclick="event.stopPropagation()">
+          <div class="book-action-btn" title="Edit" onclick="editBook(${b.id})"><i class="fas fa-pen"></i></div>
+          <div class="book-action-btn" title="Copy" onclick="copyBook(${b.id})"><i class="fas fa-copy"></i></div>
+          <div class="book-action-btn" title="Share"><i class="fas fa-share"></i></div>
+        </div>
+      </div>
+    </div>`;}).join('');
+}
+function filterBooks(){renderBooks();}
+function openBook(id){
+  state.currentBookId=id;
+  const book=DB.get('books',[]).find(b=>b.id===id);
+  if(!book) return;
+  document.getElementById('bookDetailName').textContent=book.name;
+  updateBookBalance();
+  navTo('bookDetailPage');
+  renderTxns();
+}
+function updateBookBalance(){
+  const book=DB.get('books',[]).find(b=>b.id===state.currentBookId);
+  const txns=DB.get('transactions',[]).filter(t=>t.bookId===state.currentBookId);
+  const bal=(book?.opening||0)+txns.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0)-txns.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('bookDetailBalance').textContent='Balance: '+fmt(bal);
+}
+function showAddBookModal(){document.getElementById('newBookName').value='';document.getElementById('newBookBalance').value='';openModal('addBookModal');}
+function quickAddBook(name){document.getElementById('newBookName').value=name;openModal('addBookModal');}
+function saveBook(){
+  const name=document.getElementById('newBookName').value;
+  if(!name){showToast('Enter book name','danger');return;}
+  const books=DB.get('books',[]);
+  const id=Math.max(0,...books.map(b=>b.id))+1;
+  books.push({id,bizId:DB.get('currentBiz',1),name,opening:parseFloat(document.getElementById('newBookBalance').value)||0,members:1,updatedAt:new Date().toISOString()});
+  DB.set('books',books);
+  closeModal('addBookModal');renderBooks();showToast('Book added!','success');
+}
+function copyBook(id){
+  const books=DB.get('books',[]);
+  const orig=books.find(b=>b.id===id);
+  if(!orig) return;
+  const newId=Math.max(0,...books.map(b=>b.id))+1;
+  books.push({...orig,id:newId,name:orig.name+' (Copy)',updatedAt:new Date().toISOString()});
+  DB.set('books',books);renderBooks();showToast('Book copied!');
+}
+function editBook(id){
+  const books=DB.get('books',[]);
+  const b=books.find(b=>b.id===id);
+  if(!b) return;
+  const name=prompt('Book Name:',b.name);
+  if(name){b.name=name;DB.set('books',books);renderBooks();}
+}
+
+// ======== TRANSACTIONS ========
+function renderTxns(){
+  const cats=DB.get('categories',[]);
+  const txns=DB.get('transactions',[]).filter(t=>t.bookId===state.currentBookId).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const el=document.getElementById('txnList');
+  if(!txns.length){el.innerHTML='<div class="empty-state"><i class="fas fa-receipt"></i><h3>No Transactions Yet</h3><p>Tap Cash In or Cash Out to add</p></div>';return;}
+  let groups={};
+  txns.forEach(t=>{const g=groupLabel(t.date);if(!groups[g])groups[g]=[];groups[g].push(t);});
+  el.innerHTML=Object.entries(groups).map(([g,ts])=>`
+    <div class="date-group">${g}</div>
+    ${ts.map(t=>{const c=cats.find(c=>c.id===t.catId)||{icon:'fa-circle',color:'#888',name:'Other'};return`
+    <div class="txn-item" onclick="editTxn(${t.id})">
+      <div class="txn-icon" style="background:${c.color}22;color:${c.color};"><i class="fas ${c.icon}"></i></div>
+      <div class="txn-info">
+        <div class="txn-name">${t.note||c.name}</div>
+        <div class="txn-detail">${t.party||''} · ${t.mode}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="txn-amount ${t.type}">${t.type==='in'?'+':'-'}${fmt(t.amount)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;cursor:pointer;" onclick="event.stopPropagation();deleteTxn(${t.id})">Delete</div>
+      </div>
+    </div>`}).join('')}`).join('');
+}
+function openAddTxn(type){
+  state.txnType=type;state.editTxnId=null;state.selectedCat=null;state.selectedMode='cash';
+  setTxnType(type);
+  document.getElementById('txnAmount').value='';
+  document.getElementById('txnAmountDisplay').textContent='0';
+  document.getElementById('txnParty').value='';
+  document.getElementById('txnNote').value='';
+  document.getElementById('receiptName').textContent='';
+  const now=new Date();now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+  document.getElementById('txnDate').value=now.toISOString().slice(0,16);
+  renderCategoryGrid();
+  selectMode('cash');
+  openModal('addTxnModal');
+}
+function setTxnType(type){
+  state.txnType=type;
+  document.getElementById('txnTypeIn').className='type-btn in'+(type==='in'?' active':'');
+  document.getElementById('txnTypeOut').className='type-btn out'+(type==='out'?' active':'');
+}
+function renderCategoryGrid(){
+  const cats=DB.get('categories',[]);
+  document.getElementById('categoryGrid').innerHTML=cats.map(c=>`
+    <div class="cat-item${state.selectedCat===c.id?' selected':''}" onclick="selectCat(${c.id})">
+      <i class="fas ${c.icon}" style="color:${c.color};"></i>
+      <span>${c.name}</span>
+    </div>`).join('');
+}
+function selectCat(id){state.selectedCat=id;renderCategoryGrid();}
+function selectMode(m){
+  state.selectedMode=m;
+  ['cash','bank','upi'].forEach(x=>{
+    document.getElementById('mode-'+x).className='pay-pill'+(m===x?' selected':'');
+  });
+}
+function saveTxn(){
+  const amt=parseFloat(document.getElementById('txnAmount').value);
+  if(!amt||amt<=0){showToast('Enter valid amount','danger');return;}
+  const txns=DB.get('transactions',[]);
+  const books=DB.get('books',[]);
+  const dateVal=document.getElementById('txnDate').value;
+  if(state.editTxnId){
+    const t=txns.find(t=>t.id===state.editTxnId);
+    if(t){Object.assign(t,{type:state.txnType,amount:amt,catId:state.selectedCat,mode:state.selectedMode,party:document.getElementById('txnParty').value,note:document.getElementById('txnNote').value,date:dateVal.split('T')[0]});}
+  } else {
+    const id=Math.max(0,...txns.map(t=>t.id),0)+1;
+    txns.push({id,bookId:state.currentBookId,type:state.txnType,amount:amt,catId:state.selectedCat,mode:state.selectedMode,party:document.getElementById('txnParty').value,note:document.getElementById('txnNote').value,date:dateVal.split('T')[0]});
+    const bk=books.find(b=>b.id===state.currentBookId);
+    if(bk) bk.updatedAt=new Date().toISOString();
+  }
+  DB.set('transactions',txns);DB.set('books',books);
+  closeModal('addTxnModal');renderTxns();updateBookBalance();
+  showToast(state.editTxnId?'Transaction updated!':'Transaction saved!','success');
+}
+function editTxn(id){
+  const t=DB.get('transactions',[]).find(t=>t.id===id);
+  if(!t) return;
+  state.editTxnId=id;state.txnType=t.type;state.selectedCat=t.catId;state.selectedMode=t.mode;
+  setTxnType(t.type);
+  document.getElementById('txnAmount').value=t.amount;
+  document.getElementById('txnAmountDisplay').textContent=t.amount;
+  document.getElementById('txnParty').value=t.party||'';
+  document.getElementById('txnNote').value=t.note||'';
+  document.getElementById('txnDate').value=t.date+'T00:00';
+  renderCategoryGrid();selectMode(t.mode);
+  openModal('addTxnModal');
+}
+function deleteTxn(id){
+  if(!confirm('Delete this transaction?')) return;
+  const txns=DB.get('transactions',[]).filter(t=>t.id!==id);
+  DB.set('transactions',txns);renderTxns();updateBookBalance();showToast('Deleted');
+}
+function openTxnDetail(id){openBook(DB.get('transactions',[]).find(t=>t.id===id)?.bookId||state.currentBookId);editTxn(id);}
+function handleReceipt(input){if(input.files[0]) document.getElementById('receiptName').textContent=input.files[0].name;}
+
+// ======== KHATA ========
+function renderKhata(){
+  const khata=DB.get('khata',[]).filter(k=>k.bizId===DB.get('currentBiz',1)&&k.type===state.khataType);
+  const el=document.getElementById('khataList');
+  if(!khata.length){
+    el.innerHTML=`<div class="empty-state"><i class="fas fa-handshake"></i><h3>No ${state.khataType==='receivable'?'Receivables':'Payables'}</h3><p>Add entries here</p></div>`;return;
+  }
+  el.innerHTML=khata.map(k=>`
+    <div class="khata-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div>
+          <div class="khata-party">${k.party}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${k.note||''}</div>
+          ${k.dueDate?`<div style="font-size:11px;color:var(--warning);margin-top:2px;"><i class="fas fa-calendar"></i> Due: ${fmtDate(k.dueDate)}</div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div class="khata-amount" style="color:${k.type==='receivable'?'var(--success)':'var(--danger)'};">${fmt(k.remaining)}</div>
+          ${k.amount!==k.remaining?`<div style="font-size:11px;color:var(--text3);">of ${fmt(k.amount)}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="settleKhata(${k.id})"><i class="fas fa-check"></i> Settle</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteKhata(${k.id})" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+function switchKhataTab(type){
+  state.khataType=type;
+  document.getElementById('khataTab1').className='pill-tab'+(type==='receivable'?' active':'');
+  document.getElementById('khataTab2').className='pill-tab'+(type==='payable'?' active':'');
+  renderKhata();
+}
+function showAddKhataModal(){
+  setKhataType('receivable');
+  document.getElementById('khataParty').value='';
+  document.getElementById('khataAmount').value='';
+  document.getElementById('khataNote').value='';
+  document.getElementById('khataDueDate').value='';
+  openModal('addKhataModal');
+}
+function setKhataType(t){
+  state.khataType=t;
+  document.getElementById('khataTypeIn').className='type-btn in'+(t==='receivable'?' active':'');
+  document.getElementById('khataTypeOut').className='type-btn out'+(t==='payable'?' active':'');
+}
+function saveKhata(){
+  const party=document.getElementById('khataParty').value;
+  const amount=parseFloat(document.getElementById('khataAmount').value);
+  if(!party||!amount){showToast('Fill all fields','danger');return;}
+  const khata=DB.get('khata',[]);
+  khata.push({id:Date.now(),bizId:DB.get('currentBiz',1),type:state.khataType,party,amount,remaining:amount,note:document.getElementById('khataNote').value,dueDate:document.getElementById('khataDueDate').value});
+  DB.set('khata',khata);closeModal('addKhataModal');renderKhata();showToast('Khata entry added!','success');
+}
+function settleKhata(id){
+  const amt=parseFloat(prompt('Settle amount (₹):')||'0');
+  if(!amt) return;
+  const khata=DB.get('khata',[]);
+  const k=khata.find(k=>k.id===id);
+  if(k) k.remaining=Math.max(0,k.remaining-amt);
+  DB.set('khata',khata);renderKhata();showToast('Settled!','success');
+}
+function deleteKhata(id){
+  if(!confirm('Delete this entry?')) return;
+  DB.set('khata',DB.get('khata',[]).filter(k=>k.id!==id));renderKhata();showToast('Deleted');
+}
+
+// ======== REPORTS ========
+let reportData={};
+function setReportPeriod(p,el){
+  state.reportPeriod=p;
+  document.querySelectorAll('.pill-tab').forEach(t=>t.classList.remove('active'));
+  el?.classList.add('active');
+  document.getElementById('customDateRange').style.display=p==='custom'?'flex':'none';
+  if(p!=='custom') generateReport();
+}
+function generateReport(){
+  const txns=DB.get('transactions',[]);
+  const cats=DB.get('categories',[]);
+  const now=new Date();
+  let start,end;
+  if(state.reportPeriod==='today'){start=end=now.toISOString().split('T')[0];}
+  else if(state.reportPeriod==='week'){const d=new Date(now);d.setDate(d.getDate()-7);start=d.toISOString().split('T')[0];end=now.toISOString().split('T')[0];}
+  else if(state.reportPeriod==='month'){start=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;end=now.toISOString().split('T')[0];}
+  else{start=document.getElementById('reportStart').value;end=document.getElementById('reportEnd').value;}
+  const filtered=txns.filter(t=>t.date>=start&&t.date<=end);
+  const totalIn=filtered.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+  const totalOut=filtered.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('rptIn').textContent=fmt(totalIn);
+  document.getElementById('rptOut').textContent=fmt(totalOut);
+  // By category
+  const byCat={};
+  filtered.filter(t=>t.type==='out').forEach(t=>{
+    const c=cats.find(c=>c.id===t.catId);
+    const name=c?.name||'Other';
+    const color=c?.color||'#888';
+    if(!byCat[name]) byCat[name]={amount:0,color};
+    byCat[name].amount+=t.amount;
+  });
+  reportData=byCat;
+  // Pie chart
+  if(pieChartInst) pieChartInst.destroy();
+  const labels=Object.keys(byCat);
+  const data=labels.map(k=>byCat[k].amount);
+  const colors=labels.map(k=>byCat[k].color);
+  const ctx=document.getElementById('pieChart').getContext('2d');
+  pieChartInst=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'rgba(255,255,255,0.1)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'rgba(255,255,255,0.7)',font:{size:11},boxWidth:12}}}}});
+  // Table
+  const tbody=document.getElementById('reportTableBody');
+  tbody.innerHTML=labels.length?labels.sort((a,b)=>byCat[b].amount-byCat[a].amount).map(k=>`
+    <tr>
+      <td><span style="color:${byCat[k].color};">●</span> ${k}</td>
+      <td style="color:var(--danger);">${fmt(byCat[k].amount)}</td>
+      <td style="color:var(--text2);">${totalOut?((byCat[k].amount/totalOut)*100).toFixed(1)+'%':'0%'}</td>
+    </tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">No data for this period</td></tr>';
+}
+function renderReports(){generateReport();}
+
+// ======== EXPORT ========
+function exportPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  doc.setFontSize(18);doc.text('Zeebas CashBook - Expense Report',14,20);
+  doc.setFontSize(11);doc.text('DOT Advertising | Generated: '+new Date().toLocaleDateString('en-IN'),14,30);
+  let y=45;
+  doc.setFontSize(12);doc.text('Category',14,y);doc.text('Amount',100,y);doc.text('%',160,y);
+  y+=5;doc.line(14,y,196,y);y+=8;
+  const totalOut=Object.values(reportData).reduce((s,v)=>s+v.amount,0);
+  Object.entries(reportData).sort((a,b)=>b[1].amount-a[1].amount).forEach(([k,v])=>{
+    doc.setFontSize(10);doc.text(k,14,y);doc.text('Rs.'+v.amount.toLocaleString('en-IN'),100,y);
+    doc.text(totalOut?((v.amount/totalOut)*100).toFixed(1)+'%':'0%',160,y);y+=8;
+  });
+  y+=4;doc.line(14,y,196,y);y+=8;
+  doc.setFontSize(11);doc.text('Total: Rs.'+totalOut.toLocaleString('en-IN'),100,y);
+  doc.save('zeebas-report-'+new Date().toISOString().split('T')[0]+'.pdf');
+}
+function exportExcel(){
+  const data=[['Category','Amount (INR)','Percentage']];
+  const totalOut=Object.values(reportData).reduce((s,v)=>s+v.amount,0);
+  Object.entries(reportData).forEach(([k,v])=>{data.push([k,v.amount,totalOut?((v.amount/totalOut)*100).toFixed(1)+'%':'0%']);});
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb,ws,'Report');
+  XLSX.writeFile(wb,'zeebas-report-'+new Date().toISOString().split('T')[0]+'.xlsx');
+}
+function shareWhatsApp(){
+  const totalOut=Object.values(reportData).reduce((s,v)=>s+v.amount,0);
+  let txt='*Zeebas CashBook - Expense Report*\n*DOT Advertising*\n\n';
+  Object.entries(reportData).sort((a,b)=>b[1].amount-a[1].amount).forEach(([k,v])=>{txt+=`${k}: ₹${v.amount.toLocaleString('en-IN')}\n`;});
+  txt+=`\n*Total: ₹${totalOut.toLocaleString('en-IN')}*`;
+  window.open('https://wa.me/?text='+encodeURIComponent(txt));
+}
+
+// ======== NOTIFICATIONS ========
+function showNotifications(){
+  const notifs=DB.get('notifications',[]);
+  const el=document.getElementById('notifList');
+  if(!notifs.length){el.innerHTML='<div class="empty-state"><i class="fas fa-bell"></i><h3>No Notifications</h3></div>';openModal('notifModal');return;}
+  el.innerHTML=notifs.map(n=>`
+    <div style="padding:14px;border-radius:var(--radius-sm);background:${n.read?'transparent':'rgba(99,102,241,0.08)'};border:1px solid var(--glass-border);margin-bottom:8px;" onclick="readNotif(${n.id})">
+      <div style="font-size:14px;font-weight:600;">${n.title}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px;">${n.message}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;">${fmtDate(n.time)}</div>
+    </div>`).join('');
+  openModal('notifModal');
+}
+function readNotif(id){
+  const notifs=DB.get('notifications',[]);
+  const n=notifs.find(n=>n.id===id);
+  if(n) n.read=true;
+  DB.set('notifications',notifs);
+  document.getElementById('notifBadge').textContent=notifs.filter(n=>!n.read).length||'';
+  showNotifications();
+}
+
+// ======== RECURRING ========
+function showRecurring(){
+  renderRecurring();openModal('recurringModal');
+}
+function renderRecurring(){
+  const rec=DB.get('recurring',[]).filter(r=>r.bookId===state.currentBookId||(state.currentBookId===null));
+  const cats=DB.get('categories',[]);
+  document.getElementById('recurringList').innerHTML=rec.length?rec.map(r=>{
+    const c=cats.find(c=>c.id===r.catId)||{icon:'fa-circle',color:'#888',name:'Other'};
+    return`<div class="recurring-card">
+      <div class="txn-icon" style="background:${c.color}22;color:${c.color};"><i class="fas ${c.icon}"></i></div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;">${r.note||c.name}</div>
+        <div style="font-size:12px;color:var(--text2);">${r.frequency} · Next: ${fmtDate(r.nextDate)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:15px;font-weight:700;color:${r.type==='in'?'var(--success)':'var(--danger)'};">${fmt(r.amount)}</div>
+        <div style="font-size:11px;cursor:pointer;color:var(--danger);margin-top:4px;" onclick="deleteRecurring(${r.id})">Remove</div>
+      </div>
+    </div>`;}).join(''):'<div class="empty-state" style="padding:24px;"><i class="fas fa-rotate"></i><h3>No Recurring</h3></div>';
+}
+function showAddRecurring(){
+  const name=prompt('Description:');if(!name) return;
+  const amount=parseFloat(prompt('Amount (₹):'));if(!amount) return;
+  const type=confirm('Is this Cash In? (Cancel for Cash Out)')?'in':'out';
+  const freq=prompt('Frequency: daily / weekly / monthly','monthly')||'monthly';
+  const rec=DB.get('recurring',[]);
+  rec.push({id:Date.now(),bookId:state.currentBookId||1,type,amount,catId:1,note:name,party:'',frequency:freq,nextDate:new Date().toISOString().split('T')[0]});
+  DB.set('recurring',rec);renderRecurring();showToast('Recurring added!','success');
+}
+function deleteRecurring(id){
+  DB.set('recurring',DB.get('recurring',[]).filter(r=>r.id!==id));renderRecurring();
+}
+
+// ======== BACKUP ========
+function backupData(){
+  const data={version:'1.0',exportedAt:new Date().toISOString(),user:DB.get('user'),businesses:DB.get('businesses',[]),books:DB.get('books',[]),transactions:DB.get('transactions',[]),categories:DB.get('categories',[]),khata:DB.get('khata',[])};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='zeebas-backup-'+new Date().toISOString().split('T')[0]+'.json';a.click();
+  showToast('Backup downloaded!','success');
+}
+function restoreData(input){
+  const file=input.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.books) DB.set('books',data.books);
+      if(data.transactions) DB.set('transactions',data.transactions);
+      if(data.categories) DB.set('categories',data.categories);
+      if(data.khata) DB.set('khata',data.khata);
+      showToast('Data restored!','success');renderDashboard();
+    }catch{showToast('Invalid backup file','danger');}
+  };reader.readAsText(file);
+}
+
+// ======== MODALS ========
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m) m.classList.remove('active');});});
+
+// ======== TOAST ========
+function showToast(msg,type='info'){
+  const t=document.createElement('div');
+  const colors={success:'var(--success)',danger:'var(--danger)',info:'var(--primary)'};
+  t.style.cssText=`position:fixed;bottom:calc(var(--nav-h)+80px);left:50%;transform:translateX(-50%);background:${colors[type]||colors.info};color:#fff;padding:12px 24px;border-radius:50px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;white-space:nowrap;`;
+  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+
+// ======== FILTER/SEARCH MODAL (stub) ========
+function showSearchModal(){
+  const q=prompt('Search transactions:');
+  if(!q) return;
+  const txns=DB.get('transactions',[]).filter(t=>t.bookId===state.currentBookId&&((t.note||'').toLowerCase().includes(q.toLowerCase())||(t.party||'').toLowerCase().includes(q.toLowerCase())));
+  const cats=DB.get('categories',[]);
+  const el=document.getElementById('txnList');
+  el.innerHTML=txns.length?txns.map(t=>{const c=cats.find(c=>c.id===t.catId)||{icon:'fa-circle',color:'#888'};return`<div class="txn-item"><div class="txn-icon" style="background:${c.color}22;color:${c.color};"><i class="fas ${c.icon}"></i></div><div class="txn-info"><div class="txn-name">${t.note||'Transaction'}</div><div class="txn-detail">${t.party||''}</div></div><div class="txn-amount ${t.type}">${fmt(t.amount)}</div></div>`;}).join(''):'<div class="empty-state"><i class="fas fa-search"></i><h3>No results</h3></div>';
+}
+function showFilterModal(){showToast('Filter: Coming soon');}
+
+// Update notif badge
+setTimeout(()=>{
+  const notifs=DB.get('notifications',[]);
+  const unread=notifs.filter(n=>!n.read).length;
+  document.getElementById('notifBadge').textContent=unread||'';
+},500);
+</script>
+</body>
+</html>
