@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeebas CashBook — Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0a0f;
+  --glass-bg:rgba(255,255,255,0.06);
+  --glass-border:rgba(255,255,255,0.12);
+  --glass-shadow:0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+  --text:#f5f5f7;
+  --text-dim:#a1a1aa;
+  --primary:linear-gradient(135deg,#6366f1,#8b5cf6);
+  --primary-solid:#6366f1;
+  --success:#10b981;
+  --danger:#ef4444;
+  --warning:#f59e0b;
+  --hover:rgba(255,255,255,0.08);
+}
+[data-theme="light"]{
+  --bg:#eef0f5;
+  --glass-bg:rgba(255,255,255,0.65);
+  --glass-border:rgba(0,0,0,0.08);
+  --glass-shadow:0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+  --text:#1a1a2e;
+  --text-dim:#52525b;
+  --hover:rgba(0,0,0,0.04);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+  transition:background .3s,color .3s;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(99,102,241,0.18), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(139,92,246,0.16), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16,185,129,0.06), transparent 50%);
+}
+a{color:inherit;text-decoration:none;}
+.glass{
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-border);
+  border-radius:20px;
+  box-shadow:var(--glass-shadow);
+}
+.btn{
+  border:none;cursor:pointer;font-weight:600;font-size:14px;
+  padding:10px 18px;border-radius:12px;color:#fff;
+  background:var(--primary);transition:transform .15s,opacity .2s;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn:hover{transform:translateY(-1px);opacity:.92;}
+.btn-ghost{background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text);}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);}
+.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);}
+.btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:9px;}
+.icon-btn{
+  width:34px;height:34px;border-radius:10px;display:inline-flex;
+  align-items:center;justify-content:center;cursor:pointer;
+  background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text);
+  transition:background .2s;
+}
+.icon-btn:hover{background:var(--hover);}
+
+/* SIDEBAR */
+#sidebar{
+  position:fixed;top:0;left:0;width:260px;height:100vh;
+  padding:18px 14px;display:flex;flex-direction:column;
+  border-radius:0 24px 24px 0;z-index:50;overflow-y:auto;
+}
+.brand{display:flex;align-items:center;gap:12px;padding:6px 8px 18px;}
+.brand .logo{
+  width:42px;height:42px;border-radius:13px;background:var(--primary);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff;
+  box-shadow:0 4px 14px rgba(99,102,241,.5);
+}
+.brand .bt{font-weight:700;font-size:15px;}
+.brand .bs{font-size:11px;color:var(--text-dim);}
+.nav-label{
+  font-size:10px;text-transform:uppercase;letter-spacing:1.4px;
+  color:var(--text-dim);margin:16px 12px 6px;font-weight:700;
+  display:flex;align-items:center;gap:8px;
+}
+.nav-label::after{content:"";flex:1;height:1px;background:var(--glass-border);}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;
+  border-radius:12px;cursor:pointer;font-size:14px;font-weight:500;
+  color:var(--text-dim);transition:background .2s,color .2s;margin:2px 0;
+}
+.nav-item i,.nav-item .emo{width:20px;text-align:center;font-size:15px;}
+.nav-item:hover{background:var(--hover);color:var(--text);}
+.nav-item.active{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.4);}
+.sidebar-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--glass-border);}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px;}
+.avatar{
+  width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#ec4899);
+  display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;
+}
+
+/* MAIN */
+#main{margin-left:260px;padding:0 26px 40px;min-height:100vh;}
+#topbar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;
+  padding:14px 20px;margin:14px 0 22px;
+}
+.topbar-logo{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px;}
+.topbar-logo span{color:var(--primary-solid);}
+.dropdown{position:relative;}
+.dd-toggle{
+  display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;
+  background:var(--glass-bg);border:1px solid var(--glass-border);cursor:pointer;font-weight:600;font-size:13px;
+}
+.dd-menu{
+  position:absolute;top:calc(100% + 8px);min-width:230px;padding:10px;z-index:60;
+  display:none;flex-direction:column;gap:4px;
+}
+.dd-menu.open{display:flex;}
+.dd-menu input{
+  width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--glass-border);
+  background:var(--bg);color:var(--text);font-size:13px;margin-bottom:6px;
+}
+.dd-item{padding:9px 12px;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px;}
+.dd-item:hover{background:var(--hover);}
+.spacer{flex:1;}
+.bell{position:relative;}
+.bell .badge{
+  position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;
+  font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;
+}
+
+/* PAGES */
+.page{display:none;animation:fade .35s ease;}
+.page.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.page-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
+.page-title{font-size:24px;font-weight:800;}
+.page-sub{font-size:13px;color:var(--text-dim);margin-top:2px;}
+
+.role-badge{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:14px;
+  background:var(--primary);color:#fff;font-weight:600;font-size:13px;margin-bottom:18px;
+}
+
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}}
+
+.stat-card{padding:20px;}
+.stat-card .ic{
+  width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  font-size:19px;color:#fff;margin-bottom:14px;
+}
+.stat-card .lbl{font-size:13px;color:var(--text-dim);}
+.stat-card .val{font-size:26px;font-weight:800;margin-top:4px;}
+.stat-card .delta{font-size:12px;margin-top:8px;font-weight:600;}
+.up{color:var(--success);}.down{color:var(--danger);}
+
+.card{padding:20px;margin-bottom:18px;}
+.card-title{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.chart-wrap{position:relative;height:300px;}
+
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{
+  text-align:left;padding:11px 12px;color:var(--text-dim);font-weight:600;font-size:11px;
+  text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--glass-border);
+}
+td{padding:12px;border-bottom:1px solid var(--glass-border);}
+tbody tr:hover{background:var(--hover);}
+tbody tr:last-child td{border-bottom:none;}
+.tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;}
+.tag-in{background:rgba(16,185,129,.18);color:#34d399;}
+.tag-out{background:rgba(239,68,68,.18);color:#f87171;}
+.tag-admin{background:rgba(99,102,241,.2);color:#a5b4fc;}
+.tag-emp{background:rgba(245,158,11,.18);color:#fbbf24;}
+.tag-active{background:rgba(16,185,129,.18);color:#34d399;}
+.tag-pending{background:rgba(245,158,11,.18);color:#fbbf24;}
+
+.acct-card{padding:18px;display:flex;align-items:center;gap:14px;}
+.acct-card .ai{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;}
+
+.search-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
+.input,select{
+  padding:10px 14px;border-radius:12px;border:1px solid var(--glass-border);
+  background:var(--glass-bg);color:var(--text);font-size:13px;outline:none;
+}
+.input{min-width:240px;}
+.input:focus,select:focus{border-color:var(--primary-solid);}
+
+.book-row{display:flex;align-items:center;gap:16px;padding:16px;margin-bottom:12px;}
+.book-row .bi{width:48px;height:48px;border-radius:14px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;}
+.book-row .meta{flex:1;}
+.book-row .bn{font-weight:700;font-size:15px;}
+.book-row .bd{font-size:12px;color:var(--text-dim);margin-top:3px;}
+.book-row .bal{font-weight:800;font-size:18px;}
+.chip{
+  padding:7px 14px;border-radius:20px;background:var(--glass-bg);border:1px solid var(--glass-border);
+  font-size:12px;cursor:pointer;font-weight:600;display:inline-flex;gap:6px;align-items:center;
+}
+.chip:hover{background:var(--hover);}
+
+.tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--glass-bg);padding:5px;border-radius:14px;border:1px solid var(--glass-border);width:fit-content;}
+.tab{padding:9px 18px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-dim);}
+.tab.active{background:var(--primary);color:#fff;}
+.subpage{display:none;}.subpage.active{display:block;}
+
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:600;}
+.field input,.field textarea,.field select{
+  width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--glass-border);
+  background:var(--glass-bg);color:var(--text);font-size:14px;outline:none;
+}
+.field input:focus,.field textarea:focus{border-color:var(--primary-solid);}
+
+.pagination{display:flex;gap:6px;justify-content:flex-end;margin-top:16px;}
+.pagination .pg{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--glass-bg);border:1px solid var(--glass-border);font-size:13px;}
+.pagination .pg.active{background:var(--primary);color:#fff;}
+
+/* timeline */
+.timeline{position:relative;padding-left:28px;}
+.timeline::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--glass-border);}
+.tl-item{position:relative;margin-bottom:22px;}
+.tl-item::before{content:"";position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px var(--bg);}
+.tl-date{font-size:11px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+.tl-title{font-weight:700;font-size:15px;margin:4px 0;}
+.tl-body{font-size:13px;color:var(--text-dim);}
+
+/* accordion */
+.acc-item{border:1px solid var(--glass-border);border-radius:12px;margin-bottom:8px;cursor:pointer;}
+.acc-head{padding:13px 16px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;}
+.acc-item.active{background:var(--primary);color:#fff;}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{width:min(440px,92vw);padding:26px;}
+.contact-row{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:var(--glass-bg);border:1px solid var(--glass-border);margin-bottom:14px;}
+.contact-row .ci{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;}
+.contact-row .info{flex:1;}
+.contact-row .ct{font-weight:700;font-size:14px;}
+.contact-row .cv{font-size:13px;color:var(--text-dim);}
+
+.feat-list{list-style:none;}
+.feat-list li{padding:10px 0;display:flex;align-items:center;gap:12px;font-size:14px;border-bottom:1px solid var(--glass-border);}
+.feat-list li i{color:var(--success);}
+.muted{color:var(--text-dim);font-size:13px;}
+.theme-toggle{cursor:pointer;}
+.divider{height:1px;background:var(--glass-border);margin:8px 0;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="glass">
+  <div class="brand">
+    <div class="logo">Z</div>
+    <div><div class="bt">DOT Advertising</div><div class="bs">Zeebas CashBook</div></div>
+  </div>
+
+  <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)"><span class="emo">📊</span> Dashboard</div>
+
+  <div class="nav-label">Book Keeping</div>
+  <div class="nav-item" data-page="cashbooks" onclick="showPage('cashbooks',this)"><span class="emo">📒</span> Cashbooks</div>
+
+  <div class="nav-label">Settings</div>
+  <div class="nav-item" data-page="team" onclick="showPage('team',this)"><span class="emo">👥</span> Team</div>
+  <div class="nav-item" data-page="business" onclick="showPage('business',this)"><span class="emo">⚙️</span> Business Settings</div>
+  <div class="nav-item" data-page="subscription" onclick="showPage('subscription',this)"><span class="emo">💳</span> Subscription</div>
+
+  <div class="nav-label">Others</div>
+  <div class="nav-item" data-page="whatsnew" onclick="showPage('whatsnew',this)"><span class="emo">🆕</span> What's New</div>
+  <div class="nav-item" data-page="help" onclick="showPage('help',this)"><span class="emo">❓</span> Help Docs</div>
+  <div class="nav-item" onclick="openContact()"><span class="emo">📞</span> Contact Us</div>
+  <div class="nav-item" data-page="audit" onclick="showPage('audit',this)"><span class="emo">📝</span> Audit Log</div>
+  <div class="nav-item" data-page="reports" onclick="showPage('reports',this)"><span class="emo">📈</span> Reports</div>
+
+  <div class="sidebar-foot">
+    <div class="user-chip">
+      <div class="avatar">SB</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13px">Sabeez</div><div style="font-size:11px;color:var(--text-dim)">+91 96881 87700</div></div>
+    </div>
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="alert('Logging out…')"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- TOPBAR -->
+  <div id="topbar" class="glass">
+    <div class="topbar-logo"><span>⚡</span> Zeebas <span>CashBook</span></div>
+
+    <div class="dropdown">
+      <div class="dd-toggle" onclick="toggleDD('biz-dd',event)">🏢 DOT Advertising <i class="fa-solid fa-chevron-down" style="font-size:10px"></i></div>
+      <div class="dd-menu glass" id="biz-dd">
+        <input type="text" placeholder="Search business…" oninput="filterBiz(this.value)">
+        <div class="dd-item" onclick="closeDD()">🏢 DOT Advertising</div>
+        <div class="dd-item" onclick="closeDD()">🏪 Zeer0 Retail</div>
+        <div class="divider"></div>
+        <div class="dd-item" onclick="closeDD()"><i class="fa-solid fa-plus"></i> Add Business</div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="theme-toggle icon-btn" onclick="toggleTheme()" title="Toggle theme"><i class="fa-solid fa-moon" id="theme-ic"></i></div>
+
+    <div class="bell icon-btn" onclick="alert('You have 3 new notifications')">
+      <i class="fa-solid fa-bell"></i><span class="badge">3</span>
+    </div>
+
+    <div class="dropdown">
+      <div class="dd-toggle" onclick="toggleDD('prof-dd',event)">
+        <div class="avatar" style="width:26px;height:26px;font-size:11px">Z</div> ZEEBAS Cluster <i class="fa-solid fa-chevron-down" style="font-size:10px"></i>
+      </div>
+      <div class="dd-menu glass" id="prof-dd" style="right:0">
+        <div class="dd-item" onclick="showPage('business');closeDD()"><i class="fa-solid fa-user"></i> Profile</div>
+        <div class="dd-item" onclick="showPage('business');closeDD()"><i class="fa-solid fa-gear"></i> Settings</div>
+        <div class="divider"></div>
+        <div class="dd-item" onclick="alert('Logging out…')"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="dashboard" class="page active">
+    <div class="page-head">
+      <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, Sabeez — here's your business overview</div></div>
+      <button class="btn" onclick="showPage('reports')"><i class="fa-solid fa-download"></i> Export Report</button>
+    </div>
+    <div class="role-badge"><i class="fa-solid fa-shield-halved"></i> Your Role: Primary Admin | View</div>
+
+    <div class="grid-4">
+      <div class="glass stat-card">
+        <div class="ic" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="fa-solid fa-arrow-down"></i></div>
+        <div class="lbl">Total Income (This Month)</div>
+        <div class="val" id="s-income">₹0</div>
+        <div class="delta up"><i class="fa-solid fa-arrow-trend-up"></i> +12.4% vs last month</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="ic" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="fa-solid fa-arrow-up"></i></div>
+        <div class="lbl">Total Expenses (This Month)</div>
+        <div class="val" id="s-expense">₹0</div>
+        <div class="delta down"><i class="fa-solid fa-arrow-trend-up"></i> +5.1% vs last month</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="ic" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)"><i class="fa-solid fa-scale-balanced"></i></div>
+        <div class="lbl">Net Balance</div>
+        <div class="val" id="s-net">₹0</div>
+        <div class="delta up"><i class="fa-solid fa-wallet"></i> Across all books</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="ic" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fa-solid fa-clock"></i></div>
+        <div class="lbl">Pending Dues</div>
+        <div class="val" id="s-dues">₹0</div>
+        <div class="delta down"><i class="fa-solid fa-hand-holding-dollar"></i> Receivables + Payables</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:18px">
+      <div class="glass card">
+        <div class="card-title">Monthly Income vs Expense</div>
+        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      </div>
+      <div class="glass card">
+        <div class="card-title">Category Breakdown</div>
+        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card-title" style="margin:6px 0 14px">Account Balances</div>
+    <div class="grid-3">
+      <div class="glass acct-card"><div class="ai" style="background:linear-gradient(135deg,#10b981,#059669)">💵</div><div><div class="muted">Cash</div><div style="font-weight:800;font-size:20px" id="a-cash">₹0</div></div></div>
+      <div class="glass acct-card"><div class="ai" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">🏦</div><div><div class="muted">Bank</div><div style="font-weight:800;font-size:20px" id="a-bank">₹0</div></div></div>
+      <div class="glass acct-card"><div class="ai" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📱</div><div><div class="muted">UPI</div><div style="font-weight:800;font-size:20px" id="a-upi">₹0</div></div></div>
+    </div>
+
+    <div class="glass card" style="margin-top:18px">
+      <div class="card-title">Recent Transactions <span class="muted" style="font-weight:400">Last 20</span></div>
+      <div style="overflow-x:auto"><table id="recent-tbl">
+        <thead><tr><th>Date</th><th>Book</th><th>Category</th><th>Party</th><th>Type</th><th>Amount</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="glass card">
+      <div class="card-title">Team Expense Overview</div>
+      <table id="team-exp-tbl">
+        <thead><tr><th>Member</th><th>Role</th><th>Transactions</th><th>Total Spent</th><th>Wallet</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ CASHBOOKS ============ -->
+  <section id="cashbooks" class="page">
+    <div class="page-head">
+      <div><div class="page-title">Cashbooks</div><div class="page-sub">Manage all your account books</div></div>
+      <button class="btn" onclick="alert('Add New Book')"><i class="fa-solid fa-plus"></i> Add New Book</button>
+    </div>
+    <div class="search-row">
+      <input class="input" placeholder="🔍 Search books…" oninput="filterBooks(this.value)">
+      <select onchange="sortBooks(this.value)">
+        <option value="recent">Sort: Last Updated</option>
+        <option value="name">Sort: Name</option>
+        <option value="balance">Sort: Balance</option>
+      </select>
+    </div>
+    <div style="margin-bottom:18px">
+      <span class="muted" style="margin-right:10px">Templates:</span>
+      <span class="chip" onclick="alert('Template: Daily Cash')">💵 Daily Cash</span>
+      <span class="chip" onclick="alert('Template: Project')">📁 Project Ledger</span>
+      <span class="chip" onclick="alert('Template: Payroll')">👔 Payroll</span>
+      <span class="chip" onclick="alert('Template: Petty')">🪙 Petty Cash</span>
+    </div>
+    <div id="book-list"></div>
+  </section>
+
+  <!-- ============ TEAM ============ -->
+  <section id="team" class="page">
+    <div class="page-head">
+      <div><div class="page-title">Team</div><div class="page-sub">Manage members, roles and wallets</div></div>
+    </div>
+    <div class="grid-3">
+      <div class="glass card">
+        <div class="card-title">Invite Team Member</div>
+        <div class="field"><label>Email or Mobile</label><input placeholder="name@email.com"></div>
+        <button class="btn" style="width:100%;justify-content:center" onclick="alert('Invitation sent')"><i class="fa-solid fa-paper-plane"></i> Send Invite</button>
+      </div>
+      <div class="glass card">
+        <div class="card-title">Add Member Details</div>
+        <div class="field"><label>Name</label><input placeholder="Full name"></div>
+        <div class="field"><label>Employee ID</label><input placeholder="EMP-000"></div>
+      </div>
+      <div class="glass card">
+        <div class="card-title">View Roles</div>
+        <p class="muted">Primary Admin — full access<br>Admin — manage books<br>Employee — entry only</p>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:12px" onclick="alert('Roles & permissions')">Manage Roles</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="teamTab('all',this)">All Members</div>
+      <div class="tab" onclick="teamTab('mine',this)">Your Team</div>
+    </div>
+
+    <div class="glass card">
+      <table id="team-tbl">
+        <thead><tr><th>Name</th><th>Employee ID</th><th>Email</th><th>Mobile</th><th>Role</th><th>Reports To</th><th>Wallet</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="pagination">
+        <div class="pg">‹</div><div class="pg active">1</div><div class="pg">2</div><div class="pg">›</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BUSINESS ============ -->
+  <section id="business" class="page">
+    <div class="page-head"><div><div class="page-title">Business Settings</div><div class="page-sub">DOT Advertising · Zeebas Cluster LLP</div></div></div>
+    <div class="tabs">
+      <div class="tab active" onclick="bizTab('profile',this)">Business Profile</div>
+      <div class="tab" onclick="bizTab('settings',this)">Settings</div>
+    </div>
+
+    <div id="biz-profile" class="subpage active">
+      <div class="glass card">
+        <div class="card-title">Business Profile</div>
+        <div class="grid-2">
+          <div>
+            <div class="field"><label>Business Logo</label><input type="file" accept="image/*"></div>
+            <div class="field"><label>Business Name</label><input value="DOT Advertising"></div>
+            <div class="field"><label>Address</label><textarea rows="3">NO.159 MAHADHANA STREET, MAYILADUTHURAI TALUK, Tamil Nadu 609001</textarea></div>
+            <div class="field"><label>Staff Size</label><select><option>1-10</option><option selected>10-25</option><option>25-50</option><option>50+</option></select></div>
+          </div>
+          <div>
+            <div class="field"><label>Category</label><select><option selected>Advertising / Marketing</option><option>Retail</option><option>Services</option></select></div>
+            <div class="field"><label>GST Number</label><input value="33CTNPR8742L1ZV"></div>
+            <div class="field"><label>Email</label><input value="mail@dotad.agency"></div>
+            <div class="field"><label>Mobile</label><input value="+919688187700"></div>
+          </div>
+        </div>
+        <button class="btn" onclick="alert('Profile saved')"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+      </div>
+    </div>
+
+    <div id="biz-settings" class="subpage">
+      <div class="glass card">
+        <div class="card-title">Administrative Settings</div>
+        <p class="muted" style="margin-bottom:18px">Transfer ownership or permanently delete this business. These actions are sensitive.</p>
+        <button class="btn btn-warning" style="margin-right:12px" onclick="alert('Change Primary Admin')"><i class="fa-solid fa-user-shield"></i> Change Primary Admin</button>
+        <button class="btn btn-danger" onclick="confirm('Delete this business permanently?')"><i class="fa-solid fa-trash"></i> Delete Business</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SUBSCRIPTION ============ -->
+  <section id="subscription" class="page">
+    <div class="page-head"><div><div class="page-title">Subscription</div><div class="page-sub">Manage your Zeebas CashBook plan</div></div></div>
+    <div class="grid-2">
+      <div class="glass card">
+        <div class="card-title">CashBooks Subscription <span class="tag tag-active">Active</span></div>
+        <div style="font-size:30px;font-weight:800;margin:6px 0">Starter Plan</div>
+        <div class="muted" style="margin-bottom:16px">₹999 / year</div>
+        <div class="grid-2">
+          <div><div class="muted">Start Date</div><div style="font-weight:700">01 Jan 2026</div></div>
+          <div><div class="muted">End Date</div><div style="font-weight:700">31 Dec 2026</div></div>
+        </div>
+        <button class="btn" style="margin-top:20px" onclick="alert('Redirecting to purchase…')"><i class="fa-solid fa-credit-card"></i> Purchase Subscription</button>
+      </div>
+      <div class="glass card">
+        <div class="card-title">Plan Features</div>
+        <ul class="feat-list">
+          <li><i class="fa-solid fa-check"></i> Up to 5 Cashbooks</li>
+          <li><i class="fa-solid fa-check"></i> 3 Team Members</li>
+          <li><i class="fa-solid fa-check"></i> PDF & Excel Reports</li>
+          <li><i class="fa-solid fa-check"></i> Cloud Backup & Sync</li>
+          <li><i class="fa-solid fa-check"></i> Audit Log Access</li>
+          <li><i class="fa-solid fa-check"></i> Email Support</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHAT'S NEW ============ -->
+  <section id="whatsnew" class="page">
+    <div class="page-head"><div><div class="page-title">What's New</div><div class="page-sub">Latest releases & improvements</div></div></div>
+    <div class="glass card">
+      <div class="timeline">
+        <div class="tl-item"><div class="tl-date">15 Jun 2026 · v3.4.0</div><div class="tl-title">Multi-business switching</div><div class="tl-body">Switch between DOT Advertising and other businesses instantly from the top bar, with synced wallets.</div></div>
+        <div class="tl-item"><div class="tl-date">28 May 2026 · v3.3.1</div><div class="tl-title">Excel & PDF exports</div><div class="tl-body">Generate category and member reports as downloadable PDF and Excel files directly from Reports.</div></div>
+        <div class="tl-item"><div class="tl-date">12 May 2026 · v3.3.0</div><div class="tl-title">Team wallets</div><div class="tl-body">Allocate spending wallets per employee and track utilisation in real time.</div></div>
+        <div class="tl-item"><div class="tl-date">02 Apr 2026 · v3.2.0</div><div class="tl-title">Audit log</div><div class="tl-body">Every action across books is now tracked with user, timestamp and details.</div></div>
+        <div class="tl-item"><div class="tl-date">15 Mar 2026 · v3.1.0</div><div class="tl-title">iOS 18 glass theme</div><div class="tl-body">Refreshed UI with frosted glass morphism and a brand new light mode.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HELP DOCS ============ -->
+  <section id="help" class="page">
+    <div class="page-head"><div><div class="page-title">Help Docs</div><div class="page-sub">Guides & frequently asked questions</div></div></div>
+    <div class="tabs">
+      <div class="tab active" onclick="helpTab('cb',this)">Cashbooks</div>
+      <div class="tab" onclick="helpTab('pay',this)">Payments</div>
+    </div>
+    <div class="grid-2">
+      <div class="glass card" id="acc-list"></div>
+      <div class="glass card"><div class="card-title" id="help-title">Getting started</div><div id="help-content" class="muted" style="line-height:1.7">Select a topic on the left to view details.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ AUDIT ============ -->
+  <section id="audit" class="page">
+    <div class="page-head"><div><div class="page-title">Audit Log</div><div class="page-sub">Complete trail of activity</div></div></div>
+    <div class="glass card">
+      <table id="audit-tbl">
+        <thead><tr><th>Date / Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ REPORTS ============ -->
+  <section id="reports" class="page">
+    <div class="page-head">
+      <div><div class="page-title">Reports</div><div class="page-sub">Analyse income, expenses and member activity</div></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-danger" onclick="downloadPDF()"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+        <button class="btn btn-success" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="field" style="margin:0"><label>From</label><input type="date" id="rep-from" value="2026-06-01"></div>
+      <div class="field" style="margin:0"><label>To</label><input type="date" id="rep-to" value="2026-06-30"></div>
+      <button class="btn btn-ghost" style="align-self:flex-end" onclick="alert('Filter applied')"><i class="fa-solid fa-filter"></i> Apply</button>
+    </div>
+    <div class="grid-2">
+      <div class="glass card">
+        <div class="card-title">Category Report</div>
+        <table id="cat-rep"><thead><tr><th>Category</th><th>Income</th><th>Expense</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="glass card">
+        <div class="card-title">Member Report</div>
+        <table id="mem-rep"><thead><tr><th>Member</th><th>Transactions</th><th>Total</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="modal-overlay" id="contact-modal" onclick="if(event.target===this)closeContact()">
+  <div class="modal glass">
+    <div class="card-title">Contact Us <span class="icon-btn" onclick="closeContact()"><i class="fa-solid fa-xmark"></i></span></div>
+    <div class="contact-row">
+      <div class="ci" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)"><i class="fa-solid fa-envelope"></i></div>
+      <div class="info"><div class="ct">Email Support</div><div class="cv">mail@dotad.agency</div></div>
+      <a class="btn btn-sm" href="mailto:mail@dotad.agency">Mail</a>
+    </div>
+    <div class="contact-row">
+      <div class="ci" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="fa-brands fa-whatsapp"></i></div>
+      <div class="info"><div class="ct">WhatsApp</div><div class="cv">+91 96881 87700</div></div>
+      <a class="btn btn-sm btn-success" href="https://wa.me/919688187700" target="_blank">Chat</a>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ INDIAN NUMBER FORMAT ============ */
+function formatINR(n){
+  n=Math.round(Number(n)||0);
+  const neg=n<0;n=Math.abs(n);
+  let s=n.toString();
+  if(s.length>3){
+    let last3=s.slice(-3);let rest=s.slice(0,-3);
+    rest=rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+    s=rest+","+last3;
+  }
+  return (neg?"-₹":"₹")+s;
+}
+
+/* ============ DEMO DATA + SEED ============ */
+const SEED={
+  user:{name:"Sabeez",mobile:"9688187700",role:"Primary Admin"},
+  business:{name:"DOT Advertising",gst:"33CTNPR8742L1ZV",email:"mail@dotad.agency",mobile:"+919688187700",address:"NO.159 MAHADHANA STREET, MAYILADUTHURAI TALUK, Tamil Nadu 609001"},
+  books:[
+    {id:1,name:"DOT Advertising 2025",members:3,updated:"2026-06-14",balance:77050,icon:"📒"},
+    {id:2,name:"DOT Advertising 2024",members:2,updated:"2025-12-30",balance:26909,icon:"📕"}
+  ],
+  accounts:{Cash:21500,Bank:68450,UPI:14009},
+  team:[
+    {name:"ZEEBAS Cluster",eid:"EMP-001",email:"mail@dotad.agency",mobile:"9688187700",role:"Primary Admin",reports:"—",wallet:"Active",mine:true},
+    {name:"Zeer0 Tv",eid:"EMP-002",email:"zeer0tv@dotad.agency",mobile:"9876543210",role:"Employee",reports:"ZEEBAS Cluster",wallet:"Pending",mine:true}
+  ],
+  khata:[
+    {type:"receivable",party:"Sun Media",amount:18500},
+    {type:"receivable",party:"Galaxy Films",amount:9200},
+    {type:"payable",party:"PrintHub",amount:6400},
+    {type:"payable",party:"Ad Spaces Co",amount:3100}
+  ],
+  transactions:[
+    {date:"2026-06-14",book:"DOT Advertising 2025",cat:"Sales",party:"Sun Media",type:"in",amount:25000,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-13",book:"DOT Advertising 2025",cat:"Salary",party:"Zeer0 Tv",type:"out",amount:18000,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-12",book:"DOT Advertising 2025",cat:"Rent",party:"Property Owner",type:"out",amount:15000,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-11",book:"DOT Advertising 2025",cat:"Sales",party:"Galaxy Films",type:"in",amount:32000,acct:"UPI",member:"Zeer0 Tv"},
+    {date:"2026-06-10",book:"DOT Advertising 2025",cat:"Office Supplies",party:"Staples",type:"out",amount:4200,acct:"Cash",member:"Zeer0 Tv"},
+    {date:"2026-06-09",book:"DOT Advertising 2025",cat:"Travel",party:"Uber",type:"out",amount:2300,acct:"UPI",member:"Zeer0 Tv"},
+    {date:"2026-06-08",book:"DOT Advertising 2025",cat:"Marketing",party:"Meta Ads",type:"out",amount:8500,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-07",book:"DOT Advertising 2025",cat:"Sales",party:"Local Retailer",type:"in",amount:14000,acct:"Cash",member:"ZEEBAS Cluster"},
+    {date:"2026-06-06",book:"DOT Advertising 2025",cat:"Utilities",party:"TNEB",type:"out",amount:3100,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-05",book:"DOT Advertising 2025",cat:"Sales",party:"Sun Media",type:"in",amount:21000,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-04",book:"DOT Advertising 2025",cat:"Misc",party:"Sundry",type:"out",amount:1500,acct:"Cash",member:"Zeer0 Tv"},
+    {date:"2026-06-03",book:"DOT Advertising 2025",cat:"Office Supplies",party:"Inkjet Co",type:"out",amount:2700,acct:"UPI",member:"Zeer0 Tv"},
+    {date:"2026-06-02",book:"DOT Advertising 2025",cat:"Marketing",party:"Google Ads",type:"out",amount:6200,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-06-01",book:"DOT Advertising 2025",cat:"Sales",party:"Galaxy Films",type:"in",amount:28000,acct:"UPI",member:"ZEEBAS Cluster"},
+    {date:"2026-05-30",book:"DOT Advertising 2024",cat:"Sales",party:"Sun Media",type:"in",amount:19000,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-05-29",book:"DOT Advertising 2024",cat:"Rent",party:"Property Owner",type:"out",amount:15000,acct:"Bank",member:"ZEEBAS Cluster"},
+    {date:"2026-05-28",book:"DOT Advertising 2024",cat:"Travel",party:"Air India",type:"out",amount:7800,acct:"Bank",member:"Zeer0 Tv"}
+  ],
+  audit:[
+    {dt:"2026-06-14 10:22","user":"ZEEBAS Cluster",action:"Added Transaction",details:"Sales ₹25,000 — Sun Media in DOT Advertising 2025"},
+    {dt:"2026-06-13 16:45","user":"ZEEBAS Cluster",action:"Paid Salary",details:"Salary ₹18,000 to Zeer0 Tv"},
+    {dt:"2026-06-12 09:10","user":"Zeer0 Tv",action:"Edited Entry",details:"Updated Rent amount in 2025 book"},
+    {dt:"2026-06-11 14:30","user":"ZEEBAS Cluster",action:"Invited Member",details:"Sent invite to zeer0tv@dotad.agency"},
+    {dt:"2026-06-10 11:05","user":"ZEEBAS Cluster",action:"Created Book",details:"Created DOT Advertising 2025"},
+    {dt:"2026-06-09 18:20","user":"Zeer0 Tv",action:"Login",details:"Logged in from mobile app"}
+  ]
+};
+function loadData(){
+  let d=localStorage.getItem("zeebas_data");
+  if(!d){localStorage.setItem("zeebas_data",JSON.stringify(SEED));return SEED;}
+  try{return JSON.parse(d);}catch(e){return SEED;}
+}
+const DATA=loadData();
+const CATS=["Sales","Salary","Rent","Office Supplies","Travel","Marketing","Utilities","Misc"];
+
+/* ============ NAV ============ */
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el){el.classList.add('active');}
+  else{const m=document.querySelector('.nav-item[data-page="'+id+'"]');if(m)m.classList.add('active');}
+  if(id==='dashboard')setTimeout(renderCharts,50);
+  closeDD();window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ============ DROPDOWN/THEME ============ */
+function toggleDD(id,e){e.stopPropagation();const m=document.getElementById(id);const o=m.classList.contains('open');closeDD();if(!o)m.classList.add('open');}
+function closeDD(){document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));}
+document.addEventListener('click',closeDD);
+function filterBiz(v){/* placeholder filter */}
+function toggleTheme(){
+  const h=document.documentElement;const t=h.getAttribute('data-theme')==='dark'?'light':'dark';
+  h.setAttribute('data-theme',t);
+  document.getElementById('theme-ic').className=t==='dark'?'fa-solid fa-moon':'fa-solid fa-sun';
+  localStorage.setItem('zeebas_theme',t);
+}
+(function(){const t=localStorage.getItem('zeebas_theme');if(t){document.documentElement.setAttribute('data-theme',t);document.getElementById('theme-ic').className=t==='dark'?'fa-solid fa-moon':'fa-solid fa-sun';}})();
+
+/* ============ MODAL ============ */
+function openContact(){document.getElementById('contact-modal').classList.add('open');}
+function closeContact(){document.getElementById('contact-modal').classList.remove('open');}
+
+/* ============ COMPUTE ============ */
+function thisMonthTx(){return DATA.transactions.filter(t=>t.date>='2026-06-01'&&t.date<='2026-06-30');}
+function computeStats(){
+  const m=thisMonthTx();
+  const income=m.filter(t=>t.type==='in').reduce((a,b)=>a+b.amount,0);
+  const expense=m.filter(t=>t.type==='out').reduce((a,b)=>a+b.amount,0);
+  const net=Object.values(DATA.accounts).reduce((a,b)=>a+b,0);
+  const dues=DATA.khata.reduce((a,b)=>a+b.amount,0);
+  document.getElementById('s-income').textContent=formatINR(income);
+  document.getElementById('s-expense').textContent=formatINR(expense);
+  document.getElementById('s-net').textContent=formatINR(net);
+  document.getElementById('s-dues').textContent=formatINR(dues);
+  document.getElementById('a-cash').textContent=formatINR(DATA.accounts.Cash);
+  document.getElementById('a-bank').textContent=formatINR(DATA.accounts.Bank);
+  document.getElementById('a-upi').textContent=formatINR(DATA.accounts.UPI);
+}
+
+/* ============ TABLES ============ */
+function renderRecent(){
+  const tb=document.querySelector('#recent-tbl tbody');
+  tb.innerHTML=DATA.transactions.slice(0,20).map(t=>`
+    <tr><td>${t.date}</td><td>${t.book}</td><td>${t.cat}</td><td>${t.party}</td>
+    <td><span class="tag ${t.type==='in'?'tag-in':'tag-out'}">${t.type==='in'?'IN':'OUT'}</span></td>
+    <td style="font-weight:700;color:${t.type==='in'?'var(--success)':'var(--danger)'}">${formatINR(t.amount)}</td></tr>`).join('');
+}
+function renderTeamExpense(){
+  const tb=document.querySelector('#team-exp-tbl tbody');
+  tb.innerHTML=DATA.team.map(m=>{
+    const tx=DATA.transactions.filter(t=>t.member===m.name&&t.type==='out');
+    const total=tx.reduce((a,b)=>a+b.amount,0);
+    return `<tr><td>${m.name}</td><td><span class="tag ${m.role==='Employee'?'tag-emp':'tag-admin'}">${m.role}</span></td>
+    <td>${tx.length}</td><td style="font-weight:700">${formatINR(total)}</td>
+    <td><span class="tag ${m.wallet==='Active'?'tag-active':'tag-pending'}">${m.wallet}</span></td></tr>`;
+  }).join('');
+}
+function renderBooks(list){
+  list=list||DATA.books;
+  document.getElementById('book-list').innerHTML=list.map(b=>`
+    <div class="glass book-row">
+      <div class="bi">${b.icon}</div>
+      <div class="meta"><div class="bn">${b.name}</div><div class="bd"><i class="fa-solid fa-users"></i> ${b.members} members · Updated ${b.updated}</div></div>
+      <div class="bal">${formatINR(b.balance)}</div>
+      <div style="display:flex;gap:8px">
+        <span class="icon-btn" onclick="alert('Edit ${b.name}')"><i class="fa-solid fa-pen"></i></span>
+        <span class="icon-btn" onclick="alert('Copy ${b.name}')"><i class="fa-solid fa-copy"></i></span>
+        <span class="icon-btn" onclick="alert('Share ${b.name}')"><i class="fa-solid fa-share-nodes"></i></span>
+      </div></div>`).join('');
+}
+function filterBooks(v){renderBooks(DATA.books.filter(b=>b.name.toLowerCase().includes(v.toLowerCase())));}
+function sortBooks(k){
+  let s=[...DATA.books];
+  if(k==='name')s.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(k==='balance')s.sort((a,b)=>b.balance-a.balance);
+  else s.sort((a,b)=>b.updated.localeCompare(a.updated));
+  renderBooks(s);
+}
+function renderTeam(filter){
+  const tb=document.querySelector('#team-tbl tbody');
+  let list=DATA.team;if(filter==='mine')list=DATA.team.filter(m=>m.mine);
+  tb.innerHTML=list.map(m=>`<tr><td style="font-weight:600">${m.name}</td><td>${m.eid}</td><td>${m.email}</td><td>${m.mobile}</td>
+    <td><span class="tag ${m.role==='Employee'?'tag-emp':'tag-admin'}">${m.role}</span></td><td>${m.reports}</td>
+    <td><span class="tag ${m.wallet==='Active'?'tag-active':'tag-pending'}">${m.wallet}</span></td></tr>`).join('');
+}
+function teamTab(t,el){document.querySelectorAll('#team .tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderTeam(t);}
+function bizTab(t,el){document.querySelectorAll('#business .tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');
+  document.querySelectorAll('#business .subpage').forEach(p=>p.classList.remove('active'));
+  document.getElementById(t==='profile'?'biz-profile':'biz-settings').classList.add('active');}
+function renderAudit(){
+  document.querySelector('#audit-tbl tbody').innerHTML=DATA.audit.map(a=>`<tr><td>${a.dt}</td><td style="font-weight:600">${a.user}</td>
+    <td><span class="tag tag-admin">${a.action}</span></td><td class="muted">${a.details}</td></tr>`).join('');
+}
+
+/* ============ REPORTS ============ */
+function categoryTotals(){
+  const map={};CATS.forEach(c=>map[c]={income:0,expense:0});
+  DATA.transactions.forEach(t=>{if(map[t.cat])map[t.cat][t.type==='in'?'income':'expense']+=t.amount;});
+  return map;
+}
+function renderReports(){
+  const map=categoryTotals();
+  document.querySelector('#cat-rep tbody').innerHTML=CATS.map(c=>`<tr><td>${c}</td>
+    <td style="color:var(--success)">${formatINR(map[c].income)}</td><td style="color:var(--danger)">${formatINR(map[c].expense)}</td></tr>`).join('');
+  document.querySelector('#mem-rep tbody').innerHTML=DATA.team.map(m=>{
+    const tx=DATA.transactions.filter(t=>t.member===m.name);
+    const total=tx.reduce((a,b)=>a+b.amount,0);
+    return `<tr><td>${m.name}</td><td>${tx.length}</td><td style="font-weight:700">${formatINR(total)}</td></tr>`;
+  }).join('');
+}
+function downloadPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFontSize(18);doc.text("Zeebas CashBook — Category Report",14,20);
+  doc.setFontSize(11);doc.text("DOT Advertising · "+document.getElementById('rep-from').value+" to "+document.getElementById('rep-to').value,14,28);
+  const map=categoryTotals();let y=42;
+  doc.setFontSize(12);doc.text("Category",14,y);doc.text("Income",90,y);doc.text("Expense",140,y);y+=8;
+  CATS.forEach(c=>{doc.text(c,14,y);doc.text("Rs "+map[c].income,90,y);doc.text("Rs "+map[c].expense,140,y);y+=8;});
+  doc.save("zeebas-report.pdf");
+}
+function downloadExcel(){
+  const map=categoryTotals();
+  const rows=[["Category","Income","Expense"]];
+  CATS.forEach(c=>rows.push([c,map[c].income,map[c].expense]));
+  const ws=XLSX.utils.aoa_to_sheet(rows);const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Category Report");
+  XLSX.writeFile(wb,"zeebas-report.xlsx");
+}
+
+/* ============ HELP DOCS ============ */
+const HELP={
+  cb:[
+    {q:"How do I create a cashbook?",a:"Go to Cashbooks → Add New Book, give it a name, pick a template (Daily Cash, Project, Payroll, Petty Cash) and save. The book appears instantly in your list."},
+    {q:"Can I share a book with my team?",a:"Yes. Use the share icon on any book row to invite members by email or mobile and assign Admin or Employee roles."},
+    {q:"How is the book balance calculated?",a:"Balance = total income entries minus total expense entries recorded across Cash, Bank and UPI accounts."},
+    {q:"How do I copy a book?",a:"Use the copy icon to duplicate a book's structure and categories into a new period, e.g. creating 2026 from 2025."}
+  ],
+  pay:[
+    {q:"Which payment modes are supported?",a:"Cash, Bank and UPI. Each transaction is tagged to an account and reflected in the Dashboard account balance cards."},
+    {q:"How do receivables & payables work?",a:"Khata tracks money owed to you (receivables) and money you owe (payables). The total shows under Pending Dues."},
+    {q:"How do team wallets work?",a:"Allocate a spending wallet to each employee. Their expenses draw from the wallet and appear in the Team Expense Overview."},
+    {q:"How do I record a salary payment?",a:"Add an OUT transaction with the Salary category and select the team member as the party. It is logged in the Audit Log."}
+  ]
+};
+let helpCat='cb';
+function renderHelp(){
+  document.getElementById('acc-list').innerHTML=HELP[helpCat].map((h,i)=>`
+    <div class="acc-item ${i===0?'active':''}" onclick="openHelp('${helpCat}',${i},this)">
+      <div class="acc-head">${h.q} <i class="fa-solid fa-chevron-right"></i></div></div>`).join('');
+  openHelp(helpCat,0);
+}
+function openHelp(cat,i,el){
+  const h=HELP[cat][i];
+  document.getElementById('help-title').textContent=h.q;
+  document.getElementById('help-content').textContent=h.a;
+  if(el){document.querySelectorAll('#acc-list .acc-item').forEach(x=>x.classList.remove('active'));el.classList.add('active');}
+}
+function helpTab(t,el){document.querySelectorAll('#help .tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');helpCat=t;renderHelp();}
+
+/* ============ CHARTS ============ */
+let barC,pieC;
+function renderCharts(){
+  const css=getComputedStyle(document.documentElement);
+  const grid='rgba(255,255,255,0.08)';const tick=css.getPropertyValue('--text-dim').trim()||'#a1a1aa';
+  const months=['Jan','Feb','Mar','Apr','May','Jun'];
+  const incomeM=[42000,38000,55000,47000,61000,120000];
+  const expenseM=[28000,31000,40000,35000,45000,62500];
+  if(barC)barC.destroy();
+  barC=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{labels:months,datasets:[
+      {label:'Income',data:incomeM,backgroundColor:'#10b981',borderRadius:6},
+      {label:'Expense',data:expenseM,backgroundColor:'#ef4444',borderRadius:6}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:tick}}},
+      scales:{x:{ticks:{color:tick},grid:{color:grid}},y:{ticks:{color:tick},grid:{color:grid}}}}
+  });
+  const map=categoryTotals();
+  const labels=CATS;const vals=CATS.map(c=>map[c].income+map[c].expense);
+  if(pieC)pieC.destroy();
+  pieC=new Chart(document.getElementById('pieChart'),{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:vals,backgroundColor:['#6366f1','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#a3a3a3'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:tick,boxWidth:12}}}}
+  });
+}
+
+/* ============ INIT ============ */
+computeStats();
+renderRecent();
+renderTeamExpense();
+renderBooks();
+renderTeam('all');
+renderAudit();
+renderReports();
+renderHelp();
+setTimeout(renderCharts,300);
+</script>
+</body>
+</html>
