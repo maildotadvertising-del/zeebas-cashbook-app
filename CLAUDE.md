@@ -64,6 +64,46 @@ cash book registers. Multi-user, GST-aware, works on mobile/tablet/web.
     literal MCP protocol feature, just called "MCP Connection settings" by
     the user informally).
 
+## Reference: competitor audit (web.cashbook.in)
+
+User's existing paid cash book app (CashBook, web.cashbook.in) was fully
+audited live (logged-in session, all sections) as UX/feature reference —
+not something to copy wholesale, but a proven feature set in this exact
+category (Indian SMB cash book). Key takeaways:
+
+- **Structure:** Business → multiple Books, each an independent ledger with
+  its own members/categories/payment modes.
+- **Ledger:** Cash In/Out entries with party, category, payment mode, bill
+  photo, remark; filters (duration/type/party/member/mode/category);
+  running Cash In / Cash Out / Net Balance; entry actions Edit/Delete/
+  **Move Entry** (to another book)/**Copy Entry**/**Copy Opposite Entry**
+  (mirrors as the opposite type in another book); bulk entry upload;
+  activity/audit log per entry.
+- **Passbook feature = confirms our earlier call:** it auto-imports bank
+  transactions by reading bank SMS, which is an Android-SMS-permission
+  feature only — doesn't work on iPhone. This is exactly why we chose
+  statement upload/parse instead of notification/SMS reading.
+- **Roles are two-tier** — worth adopting a similar shape:
+  - Org-level (all books): Primary Admin (one only) → Admin → Manager
+    (assigned books only) → Employee (assigned books only).
+  - Book-level: Book Admin / Operator / Viewer / Data Operator, with
+    granular permission toggles: backdated-entry rule (Always/Never/1-day-
+    before), entry-edit permission, hide net balance & reports, hide other
+    members' entries.
+- **Integrations** (their real meaning of the term): sync with **Zoho
+  Books** and **Tally** — good candidate for our own Integrations settings
+  page, beyond just bank/UPI.
+- **CashBook Payments** (their separate paid module): UPI employee expense
+  wallets — admin loads prepaid wallets, employees spend via UPI with
+  in-app proof attachment, admin sees real-time spend analytics/limits.
+  Needs KYC + Virtual Account. Noted as a possible advanced/phase-2 idea,
+  not MVP scope.
+- **Business-level:** multi-business switcher, Business Team (org-wide
+  members, Employee ID, "Reports To" hierarchy, wallet/invite status, CSV
+  export), Subscription & Billing page, quick-start book templates (Purchase
+  Order Book, Client Record, Account Book, etc.), in-app Help Docs organized
+  by topic.
+
 ## Explicitly ruled out / clarified
 
 - No native Android/iOS app — web-only, responsive.
